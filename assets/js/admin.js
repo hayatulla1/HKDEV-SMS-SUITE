@@ -41,7 +41,7 @@ jQuery(function ($) {
             action: 'hkdev_check_balance',
             nonce: nonce,
         }).done(function (response) {
-            if (!response || response.success !== true || response.data === null || response.data === undefined) {
+            if (!response || response.success !== true || response.data == null) {
                 const errorMessage = getErrorMessage(response, messages.balanceError, 'Unable to fetch balance.');
                 setStatus($status, errorMessage, true);
                 return;
@@ -77,7 +77,7 @@ jQuery(function ($) {
             phone: $phone.val(),
             nonce: nonce,
         }).done(function (response) {
-            if (!response || !response.success) {
+            if (!response || response.success !== true) {
                 const errorMessage = getErrorMessage(response, messages.testError, 'Failed to send test SMS.');
                 setStatus($status, errorMessage, true);
                 return;
