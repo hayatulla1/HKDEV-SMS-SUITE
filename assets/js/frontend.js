@@ -104,7 +104,7 @@ jQuery(function ($) {
         }
 
         setMessage(messages.sendingOtp, 'info');
-        $timer.text('');
+        $timer.text(messages.sendingOtp || '');
 
         $.post(config.ajaxUrl, {
             action: 'sib_send_otp',
