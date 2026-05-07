@@ -17,7 +17,7 @@ class HKDEV_SMS_Pro
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
 
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
-        add_action('woocommerce_after_checkout_form', [$this, 'inject_otp_ui']);
+        add_action('woocommerce_after_checkout_form', [$this, 'inject_otp_ui'], 10, 0);
 
         add_action('wp_ajax_sib_send_otp', [$this, 'ajax_send_otp']);
         add_action('wp_ajax_nopriv_sib_send_otp', [$this, 'ajax_send_otp']);
@@ -1005,7 +1005,7 @@ class HKDEV_SMS_Pro
         $this->send_sms($phone, sprintf('Order #%d status: %s', $order_id, strtoupper($to)));
     }
 
-    public function inject_otp_ui($checkout = null)
+    public function inject_otp_ui()
     {
         if (
             !$this->is_feature_enabled('hkdev_enable_otp') ||
