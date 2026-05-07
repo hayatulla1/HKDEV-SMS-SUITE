@@ -15,12 +15,12 @@ define('USP_SMS_PLUGIN_FILE', __FILE__);
 define('USP_SMS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('USP_SMS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
-require_once USP_SMS_PLUGIN_DIR . 'includes/class-universal-sms-pro.php';
-require_once USP_SMS_PLUGIN_DIR . 'includes/class-wc-order-delay-blocker.php';
+require_once USP_SMS_PLUGIN_DIR . 'includes/class-hkdev-sms-pro.php';
+require_once USP_SMS_PLUGIN_DIR . 'includes/class-hkdev-order-delay-blocker.php';
 
 add_action('plugins_loaded', static function () {
-    new Universal_SMS_Pro();
-    if (class_exists('WooCommerce')) {
-        new USP_WC_Order_Delay_Blocker();
+    new HKDEV_SMS_Pro();
+    if (class_exists('WooCommerce') && get_option('hkdev_enable_order_blocker', 'yes') === 'yes') {
+        new HKDEV_Order_Delay_Blocker();
     }
 });
