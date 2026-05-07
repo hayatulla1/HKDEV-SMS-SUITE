@@ -211,6 +211,10 @@ class USP_WC_Order_Delay_Blocker
         $manual_list = get_option(self::OPTION_MANUAL_BLOCKED_LIST, []);
         $log = get_option(self::OPTION_AUTOMATIC_BLOCK_LOG, []);
         $msg = isset($_GET['usp_wcodb_msg']) ? sanitize_text_field(wp_unslash($_GET['usp_wcodb_msg'])) : '';
+        $allowed_messages = ['manual_added', 'manual_invalid', 'unblocked', 'cleared', 'log_removed', 'log_not_found'];
+        if (!in_array($msg, $allowed_messages, true)) {
+            $msg = '';
+        }
         ?>
         <div class="wrap usp-wrap">
             <h1><?php esc_html_e('WooCommerce Order Delay Blocker', 'universal-sms-pro-gateway'); ?></h1>
@@ -334,13 +338,9 @@ class USP_WC_Order_Delay_Blocker
                                         <form method="post">
                                             <?php wp_nonce_field('usp_wcodb_remove_log_nonce'); ?>
                                             <input type="hidden" name="usp_wcodb_remove_log_btn" value="1">
-                                            <?php
-                                            $remove_token = base64_encode((string) wp_json_encode([
-                                                'order_id' => (string) ($entry['order_id'] ?? ''),
-                                                'time' => (string) ($entry['time'] ?? ''),
-                                            ]));
-                                            ?>
-                                            <input type="hidden" name="remove_log_index" value="<?php echo esc_attr($remove_token); ?>">
+                                            <input type="hidden" name="remove_log_order_id" value="<?php echo esc_attr((string) ($entry['order_id'] ?? '')); ?>">
+                                            <input type="hidden" name="remove_log_time" value="<?php echo esc_attr((string) ($entry['time'] ?? '')); ?>">
+                                            <input type="hidden" name="remove_log_sig" value="<?php echo esc_attr($this->create_log_signature((string) ($entry['order_id'] ?? ''), (string) ($entry['time'] ?? ''))); ?>">
                                             <?php submit_button(__('Remove', 'universal-sms-pro-gateway'), 'delete', '', false); ?>
                                         </form>
                                     </td>
@@ -429,10 +429,18 @@ class USP_WC_Order_Delay_Blocker
 
         if (isset($_POST['usp_wcodb_remove_log_btn'])) {
             check_admin_referer('usp_wcodb_remove_log_nonce');
-            $remove_index = isset($_POST['remove_log_index']) ? sanitize_text_field(wp_unslash($_POST['remove_log_index'])) : '';
-            $decoded = json_decode(base64_decode($remove_index, true), true);
-            $order_id_part = isset($decoded['order_id']) ? trim((string) $decoded['order_id']) : '';
-            $time_part = isset($decoded['time']) ? trim((string) $decoded['time']) : '';
+            $order_id_part = isset($_POST['remove_log_order_id']) ? sanitize_text_field(wp_unslash($_POST['remove_log_order_id'])) : '';
+            $time_part = isset($_POST['remove_log_time']) ? sanitize_text_field(wp_unslash($_POST['remove_log_time'])) : '';
+            $sig_part = isset($_POST['remove_log_sig']) ? sanitize_text_field(wp_unslash($_POST['remove_log_sig'])) : '';
+
+            if (
+                empty($order_id_part) ||
+                empty($time_part) ||
+                empty($sig_part) ||
+                !hash_equals($this->create_log_signature($order_id_part, $time_part), $sig_part)
+            ) {
+                $this->redirect_with_message('log_not_found');
+            }
 
             $log = get_option(self::OPTION_AUTOMATIC_BLOCK_LOG, []);
             $found = false;
@@ -559,8 +567,16 @@ class USP_WC_Order_Delay_Blocker
     private function initialize_salt_key()
     {
         if (!get_option(self::OPTION_SALT_KEY, '')) {
-            add_option(self::OPTION_SALT_KEY, wp_generate_password(32, true, true), '', false);
+            $candidate = wp_generate_password(32, true, true);
+            if (!add_option(self::OPTION_SALT_KEY, $candidate, '', false) && !get_option(self::OPTION_SALT_KEY, '')) {
+                update_option(self::OPTION_SALT_KEY, $candidate);
+            }
         }
+    }
+
+    private function create_log_signature($order_id, $time)
+    {
+        return hash_hmac('sha256', (string) $order_id . '|' . (string) $time, wp_salt('auth'));
     }
 
     private function get_ip_transient_key($ip)
