@@ -91,3 +91,7 @@
 #sib_msg.is-success {
     color: #047857;
 }
+
+#sib_msg.is-info {
+    color: #0369a1;
+}

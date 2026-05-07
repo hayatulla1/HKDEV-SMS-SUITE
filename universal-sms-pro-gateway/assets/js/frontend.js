@@ -5,7 +5,7 @@ jQuery(function ($) {
 
     function setMessage(message, type) {
         const $message = $('#sib_msg');
-        $message.removeClass('is-error is-success');
+        $message.removeClass('is-error is-success is-info');
 
         if (!message) {
             $message.text('');
@@ -15,6 +15,10 @@ jQuery(function ($) {
         $message.text(message);
         if (type === 'success') {
             $message.addClass('is-success');
+            return;
+        }
+        if (type === 'info') {
+            $message.addClass('is-info');
             return;
         }
 
@@ -35,8 +39,8 @@ jQuery(function ($) {
 
         e.preventDefault();
         $('#sib-otp-overlay').css('display', 'flex').attr('aria-hidden', 'false');
-        setMessage('');
-        setVerifyButtonState(true, uspSmsData.messages.sendingOtp || defaultVerifyText);
+        setMessage(uspSmsData.messages.sendingOtp, 'info');
+        setVerifyButtonState(true, defaultVerifyText);
 
         const phone = $('#billing_phone').val();
         const normalizedPhone = String(phone || '').replace(/\D+/g, '');
