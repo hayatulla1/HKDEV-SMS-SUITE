@@ -71,6 +71,9 @@ class Universal_SMS_Pro
                 'invalidOtp' => __('Invalid OTP', 'universal-sms-pro-gateway'),
                 'sendFailed' => __('Failed to send OTP.', 'universal-sms-pro-gateway'),
                 'phoneRequired' => __('Please enter a valid phone number.', 'universal-sms-pro-gateway'),
+                'otpSent' => __('OTP sent. Please check your phone.', 'universal-sms-pro-gateway'),
+                'sendingOtp' => __('Sending OTP...', 'universal-sms-pro-gateway'),
+                'verifyingOtp' => __('Verifying...', 'universal-sms-pro-gateway'),
             ],
         ]);
     }
@@ -78,8 +81,8 @@ class Universal_SMS_Pro
     public function create_menu()
     {
         add_menu_page(
-            __('SMS Gateway', 'universal-sms-pro-gateway'),
-            __('SMS Gateway', 'universal-sms-pro-gateway'),
+            __('HKDEV', 'universal-sms-pro-gateway'),
+            __('HKDEV', 'universal-sms-pro-gateway'),
             'manage_options',
             'sib-pro',
             [$this, 'main_page'],
@@ -245,7 +248,7 @@ class Universal_SMS_Pro
         $logs = get_option($this->log_option, []);
         ?>
         <div class="wrap usp-wrap">
-            <h1><?php esc_html_e('Universal SMS Pro Gateway', 'universal-sms-pro-gateway'); ?></h1>
+            <h1><?php esc_html_e('HKDEV', 'universal-sms-pro-gateway'); ?></h1>
 
             <h2 class="nav-tab-wrapper usp-nav-tab-wrapper">
                 <a href="?page=sib-pro&tab=settings" class="nav-tab <?php echo $tab === 'settings' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('API Settings', 'universal-sms-pro-gateway'); ?></a>
@@ -512,11 +515,13 @@ class Universal_SMS_Pro
         }
         ?>
         <div id="sib-otp-overlay" class="sib-otp-overlay" aria-hidden="true">
-            <div class="sib-otp-modal">
-                <h3><?php esc_html_e('Phone Verification', 'universal-sms-pro-gateway'); ?></h3>
-                <input type="text" id="sib_otp_code" placeholder="<?php esc_attr_e('Enter OTP', 'universal-sms-pro-gateway'); ?>">
+            <div class="sib-otp-modal" role="dialog" aria-modal="true" aria-labelledby="sib-otp-title" aria-describedby="sib-otp-subtitle">
+                <h3 id="sib-otp-title"><?php esc_html_e('Phone Verification', 'universal-sms-pro-gateway'); ?></h3>
+                <p id="sib-otp-subtitle" class="sib-otp-subtitle"><?php esc_html_e('Enter the OTP sent to your phone to complete checkout securely.', 'universal-sms-pro-gateway'); ?></p>
+                <label for="sib_otp_code" class="sib-otp-label"><?php esc_html_e('OTP Code', 'universal-sms-pro-gateway'); ?></label>
+                <input type="tel" id="sib_otp_code" maxlength="6" inputmode="numeric" autocomplete="one-time-code" aria-required="true" aria-describedby="sib-otp-subtitle" placeholder="<?php esc_attr_e('Enter OTP', 'universal-sms-pro-gateway'); ?>">
                 <button type="button" id="sib_verify"><?php esc_html_e('Verify & Complete Order', 'universal-sms-pro-gateway'); ?></button>
-                <p id="sib_msg" role="alert"></p>
+                <p id="sib_msg" class="sib-otp-message" role="alert"></p>
             </div>
         </div>
         <?php
