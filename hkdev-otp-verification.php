@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) {
 define('USP_SMS_PLUGIN_FILE', __FILE__);
 define('USP_SMS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('USP_SMS_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('USP_SMS_PLUGIN_VERSION', '4.0.0');
 
 require_once USP_SMS_PLUGIN_DIR . 'includes/class-hkdev-sms-pro.php';
 require_once USP_SMS_PLUGIN_DIR . 'includes/class-hkdev-order-delay-blocker.php';

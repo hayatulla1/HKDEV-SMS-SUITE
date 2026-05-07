@@ -17,7 +17,7 @@ class HKDEV_SMS_Pro
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
 
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
-        add_action('wp_footer', [$this, 'inject_otp_ui']);
+        add_action('woocommerce_after_checkout_form', [$this, 'inject_otp_ui']);
 
         add_action('wp_ajax_sib_send_otp', [$this, 'ajax_send_otp']);
         add_action('wp_ajax_nopriv_sib_send_otp', [$this, 'ajax_send_otp']);
@@ -34,7 +34,9 @@ class HKDEV_SMS_Pro
 
     public function enqueue_admin_assets($hook)
     {
-        if ($hook !== 'toplevel_page_sib-pro') {
+        $allowed_hooks = ['toplevel_page_sib-pro', 'sib-pro_page_usp-order-delay-blocker'];
+
+        if (!in_array($hook, $allowed_hooks, true)) {
             return;
         }
 
@@ -42,14 +44,14 @@ class HKDEV_SMS_Pro
             'hkdev-admin-style',
             USP_SMS_PLUGIN_URL . 'assets/css/admin.css',
             [],
-            '4.0.0'
+            USP_SMS_PLUGIN_VERSION
         );
 
         wp_enqueue_script(
             'hkdev-admin-script',
             USP_SMS_PLUGIN_URL . 'assets/js/admin.js',
             ['jquery'],
-            '4.0.0',
+            USP_SMS_PLUGIN_VERSION,
             true
         );
 
@@ -83,14 +85,14 @@ class HKDEV_SMS_Pro
             'usp-frontend-style',
             USP_SMS_PLUGIN_URL . 'assets/css/frontend.css',
             [],
-            '4.0.0'
+            USP_SMS_PLUGIN_VERSION
         );
 
         wp_enqueue_script(
             'usp-frontend-script',
             USP_SMS_PLUGIN_URL . 'assets/js/frontend.js',
             ['jquery'],
-            '4.0.0',
+            USP_SMS_PLUGIN_VERSION,
             true
         );
 
@@ -98,11 +100,14 @@ class HKDEV_SMS_Pro
             'ajaxUrl'    => admin_url('admin-ajax.php'),
             'nonce'      => wp_create_nonce('sib_otp_nonce'),
             'isVerified' => (bool) WC()->session->get('sib_otp_verified'),
+            'expirySeconds' => max(1, absint(get_option('hkdev_otp_expiry_minutes', 10))) * MINUTE_IN_SECONDS,
             'messages'   => [
                 'invalidOtp' => __('Invalid OTP', 'universal-sms-pro-gateway'),
                 'sendFailed' => __('Failed to send OTP.', 'universal-sms-pro-gateway'),
                 'phoneRequired' => __('Please enter a valid phone number.', 'universal-sms-pro-gateway'),
                 'otpSent' => __('OTP sent. Please check your phone.', 'universal-sms-pro-gateway'),
+                'otpExpired' => __('OTP expired. Please request a new one.', 'universal-sms-pro-gateway'),
+                'otpExpiresIn' => __('Code expires in %s', 'universal-sms-pro-gateway'),
                 'sendingOtp' => __('Sending OTP...', 'universal-sms-pro-gateway'),
                 'verifyingOtp' => __('Verifying...', 'universal-sms-pro-gateway'),
             ],
@@ -1000,7 +1005,7 @@ class HKDEV_SMS_Pro
         $this->send_sms($phone, sprintf('Order #%d status: %s', $order_id, strtoupper($to)));
     }
 
-    public function inject_otp_ui()
+    public function inject_otp_ui($checkout = null)
     {
         if (
             !$this->is_feature_enabled('hkdev_enable_otp') ||
@@ -1018,6 +1023,7 @@ class HKDEV_SMS_Pro
                 <p id="sib-otp-subtitle" class="sib-otp-subtitle"><?php esc_html_e('Enter the OTP sent to your phone to complete checkout securely.', 'universal-sms-pro-gateway'); ?></p>
                 <label for="sib_otp_code" class="sib-otp-label"><?php esc_html_e('OTP Code', 'universal-sms-pro-gateway'); ?></label>
                 <input type="tel" id="sib_otp_code" maxlength="<?php echo esc_attr((string) $otp_length); ?>" inputmode="numeric" autocomplete="one-time-code" aria-required="true" aria-describedby="sib-otp-subtitle" placeholder="<?php esc_attr_e('Enter OTP', 'universal-sms-pro-gateway'); ?>">
+                <p id="sib_otp_timer" class="sib-otp-timer" aria-live="polite"></p>
                 <button type="button" id="sib_verify"><?php esc_html_e('Verify & Complete Order', 'universal-sms-pro-gateway'); ?></button>
                 <p id="sib_msg" class="sib-otp-message" role="alert"></p>
             </div>

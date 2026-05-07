@@ -70,6 +70,10 @@
     padding: 0;
 }
 
+.hkdev-card + .hkdev-card {
+    margin-top: 18px;
+}
+
 .hkdev-card h3 {
     margin: 0;
     font-size: 22px;
@@ -273,6 +277,24 @@
 
 .hkdev-card-header h2 {
     margin: 0;
+}
+
+.hkdev-card-body {
+    padding: 20px;
+}
+
+.hkdev-card-body .form-table:first-child,
+.hkdev-card-body .hkdev-log-table:first-child {
+    margin-top: 0;
+}
+
+.hkdev-card-body .form-table:last-child,
+.hkdev-card-body .hkdev-log-table:last-child {
+    margin-bottom: 0;
+}
+
+.hkdev-form-actions {
+    margin-top: 16px;
 }
 
 .hkdev-log-table {

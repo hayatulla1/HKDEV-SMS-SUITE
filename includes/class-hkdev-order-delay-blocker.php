@@ -216,144 +216,172 @@ class USP_WC_Order_Delay_Blocker
             $msg = '';
         }
         ?>
-        <div class="wrap usp-wrap">
-            <h1><?php esc_html_e('WooCommerce Order Delay Blocker', 'universal-sms-pro-gateway'); ?></h1>
+        <div class="wrap hkdev-wrap">
+            <div class="hkdev-header">
+                <div>
+                    <h1><?php esc_html_e('WooCommerce Order Delay Blocker', 'universal-sms-pro-gateway'); ?></h1>
+                    <p><?php esc_html_e('Block repeat checkout attempts by IP address, phone number, or both.', 'universal-sms-pro-gateway'); ?></p>
+                </div>
+                <div class="hkdev-header-actions">
+                    <a class="button button-secondary" href="<?php echo esc_url(admin_url('admin.php?page=sib-pro&tab=overview')); ?>">
+                        <?php esc_html_e('Back to SMS Suite', 'universal-sms-pro-gateway'); ?>
+                    </a>
+                </div>
+            </div>
             <?php $this->render_notice($msg); ?>
 
-            <div class="usp-card">
-                <form method="post" action="options.php">
-                    <?php settings_fields('usp_wcodb_settings_group'); ?>
-                    <table class="form-table">
-                        <tr>
-                            <th><?php esc_html_e('Block Duration Days', 'universal-sms-pro-gateway'); ?></th>
-                            <td><input type="number" min="0" name="<?php echo esc_attr(self::OPTION_DURATION_DAYS); ?>" value="<?php echo esc_attr($days); ?>" class="small-text"></td>
-                        </tr>
-                        <tr>
-                            <th><?php esc_html_e('Block Duration Hours', 'universal-sms-pro-gateway'); ?></th>
-                            <td><input type="number" min="0" name="<?php echo esc_attr(self::OPTION_DURATION_HOURS); ?>" value="<?php echo esc_attr($hours); ?>" class="small-text"></td>
-                        </tr>
-                        <tr>
-                            <th><?php esc_html_e('Block Duration Minutes', 'universal-sms-pro-gateway'); ?></th>
-                            <td><input type="number" min="0" name="<?php echo esc_attr(self::OPTION_DURATION_MINUTES); ?>" value="<?php echo esc_attr($minutes); ?>" class="small-text"></td>
-                        </tr>
-                        <tr>
-                            <th><?php esc_html_e('Enable IP + Phone Combined Block', 'universal-sms-pro-gateway'); ?></th>
-                            <td>
-                                <label>
-                                    <input type="checkbox" name="<?php echo esc_attr(self::OPTION_COMBINED_BLOCK); ?>" value="yes" <?php checked($combined_enabled, 'yes'); ?>>
-                                    <?php esc_html_e('Only block when both IP and phone match the last order', 'universal-sms-pro-gateway'); ?>
-                                </label>
-                            </td>
-                        </tr>
+            <div class="hkdev-card">
+                <div class="hkdev-card-header">
+                    <h2><?php esc_html_e('Blocker Settings', 'universal-sms-pro-gateway'); ?></h2>
+                </div>
+                <div class="hkdev-card-body">
+                    <form method="post" action="options.php">
+                        <?php settings_fields('usp_wcodb_settings_group'); ?>
+                        <table class="form-table">
+                            <tr>
+                                <th><?php esc_html_e('Block Duration Days', 'universal-sms-pro-gateway'); ?></th>
+                                <td><input type="number" min="0" name="<?php echo esc_attr(self::OPTION_DURATION_DAYS); ?>" value="<?php echo esc_attr($days); ?>" class="small-text"></td>
+                            </tr>
+                            <tr>
+                                <th><?php esc_html_e('Block Duration Hours', 'universal-sms-pro-gateway'); ?></th>
+                                <td><input type="number" min="0" name="<?php echo esc_attr(self::OPTION_DURATION_HOURS); ?>" value="<?php echo esc_attr($hours); ?>" class="small-text"></td>
+                            </tr>
+                            <tr>
+                                <th><?php esc_html_e('Block Duration Minutes', 'universal-sms-pro-gateway'); ?></th>
+                                <td><input type="number" min="0" name="<?php echo esc_attr(self::OPTION_DURATION_MINUTES); ?>" value="<?php echo esc_attr($minutes); ?>" class="small-text"></td>
+                            </tr>
+                            <tr>
+                                <th><?php esc_html_e('Enable IP + Phone Combined Block', 'universal-sms-pro-gateway'); ?></th>
+                                <td>
+                                    <label>
+                                        <input type="hidden" name="<?php echo esc_attr(self::OPTION_COMBINED_BLOCK); ?>" value="no">
+                                        <input type="checkbox" name="<?php echo esc_attr(self::OPTION_COMBINED_BLOCK); ?>" value="yes" <?php checked($combined_enabled, 'yes'); ?>>
+                                        <?php esc_html_e('Only block when both IP and phone match the last order', 'universal-sms-pro-gateway'); ?>
+                                    </label>
+                                </td>
+                            </tr>
+                        </table>
+                        <?php submit_button(__('Save Blocker Settings', 'universal-sms-pro-gateway')); ?>
+                    </form>
+                </div>
+            </div>
+
+            <div class="hkdev-card">
+                <div class="hkdev-card-header">
+                    <h2><?php esc_html_e('Manual Block', 'universal-sms-pro-gateway'); ?></h2>
+                </div>
+                <div class="hkdev-card-body">
+                    <form method="post">
+                        <?php wp_nonce_field('usp_wcodb_manual_block_action'); ?>
+                        <input type="hidden" name="usp_wcodb_manual_block" value="1">
+                        <table class="form-table">
+                            <tr>
+                                <th><?php esc_html_e('IP Address', 'universal-sms-pro-gateway'); ?></th>
+                                <td><input type="text" name="manual_ip" class="regular-text" placeholder="203.0.113.10"></td>
+                            </tr>
+                            <tr>
+                                <th><?php esc_html_e('Phone Number', 'universal-sms-pro-gateway'); ?></th>
+                                <td><input type="text" name="manual_phone" class="regular-text" placeholder="017XXXXXXXX"></td>
+                            </tr>
+                            <tr>
+                                <th><?php esc_html_e('Note', 'universal-sms-pro-gateway'); ?></th>
+                                <td><input type="text" name="manual_note" class="large-text"></td>
+                            </tr>
+                        </table>
+                        <?php submit_button(__('Add Manual Block', 'universal-sms-pro-gateway'), 'secondary'); ?>
+                    </form>
+                </div>
+            </div>
+
+            <div class="hkdev-card">
+                <div class="hkdev-card-header">
+                    <h2><?php esc_html_e('Manual Blocked List', 'universal-sms-pro-gateway'); ?></h2>
+                </div>
+                <div class="hkdev-card-body">
+                    <table class="hkdev-log-table">
+                        <thead>
+                            <tr>
+                                <th><?php esc_html_e('Added Time', 'universal-sms-pro-gateway'); ?></th>
+                                <th><?php esc_html_e('IP', 'universal-sms-pro-gateway'); ?></th>
+                                <th><?php esc_html_e('Phone', 'universal-sms-pro-gateway'); ?></th>
+                                <th><?php esc_html_e('Note', 'universal-sms-pro-gateway'); ?></th>
+                                <th><?php esc_html_e('Action', 'universal-sms-pro-gateway'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($manual_list)) : ?>
+                                <tr><td colspan="5"><?php esc_html_e('No manual blocks found.', 'universal-sms-pro-gateway'); ?></td></tr>
+                            <?php else : ?>
+                                <?php foreach ($manual_list as $key => $entry) : ?>
+                                    <tr>
+                                        <td><?php echo esc_html($entry['time'] ?? ''); ?></td>
+                                        <td><?php echo esc_html($entry['ip'] ?? ''); ?></td>
+                                        <td><?php echo esc_html($entry['phone'] ?? ''); ?></td>
+                                        <td><?php echo esc_html($entry['note'] ?? ''); ?></td>
+                                        <td>
+                                            <form method="post">
+                                                <?php wp_nonce_field('usp_wcodb_unblock_nonce'); ?>
+                                                <input type="hidden" name="usp_wcodb_unblock_action_btn" value="1">
+                                                <input type="hidden" name="unblock_key" value="<?php echo esc_attr($key); ?>">
+                                                <?php submit_button(__('Unblock', 'universal-sms-pro-gateway'), 'delete', '', false); ?>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
                     </table>
-                    <?php submit_button(__('Save Blocker Settings', 'universal-sms-pro-gateway')); ?>
-                </form>
+                </div>
             </div>
 
-            <div class="usp-card">
-                <h2><?php esc_html_e('Manual Block', 'universal-sms-pro-gateway'); ?></h2>
-                <form method="post">
-                    <?php wp_nonce_field('usp_wcodb_manual_block_action'); ?>
-                    <input type="hidden" name="usp_wcodb_manual_block" value="1">
-                    <table class="form-table">
-                        <tr>
-                            <th><?php esc_html_e('IP Address', 'universal-sms-pro-gateway'); ?></th>
-                            <td><input type="text" name="manual_ip" class="regular-text" placeholder="203.0.113.10"></td>
-                        </tr>
-                        <tr>
-                            <th><?php esc_html_e('Phone Number', 'universal-sms-pro-gateway'); ?></th>
-                            <td><input type="text" name="manual_phone" class="regular-text" placeholder="017XXXXXXXX"></td>
-                        </tr>
-                        <tr>
-                            <th><?php esc_html_e('Note', 'universal-sms-pro-gateway'); ?></th>
-                            <td><input type="text" name="manual_note" class="large-text"></td>
-                        </tr>
+            <div class="hkdev-card">
+                <div class="hkdev-card-header">
+                    <h2><?php esc_html_e('Automatic Block Log', 'universal-sms-pro-gateway'); ?></h2>
+                </div>
+                <div class="hkdev-card-body">
+                    <table class="hkdev-log-table">
+                        <thead>
+                            <tr>
+                                <th><?php esc_html_e('Time', 'universal-sms-pro-gateway'); ?></th>
+                                <th><?php esc_html_e('Order', 'universal-sms-pro-gateway'); ?></th>
+                                <th><?php esc_html_e('IP', 'universal-sms-pro-gateway'); ?></th>
+                                <th><?php esc_html_e('Phone', 'universal-sms-pro-gateway'); ?></th>
+                                <th><?php esc_html_e('Expires', 'universal-sms-pro-gateway'); ?></th>
+                                <th><?php esc_html_e('Action', 'universal-sms-pro-gateway'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($log)) : ?>
+                                <tr><td colspan="6"><?php esc_html_e('No automatic block logs found.', 'universal-sms-pro-gateway'); ?></td></tr>
+                            <?php else : ?>
+                                <?php foreach ($log as $entry) : ?>
+                                    <tr>
+                                        <td><?php echo esc_html($entry['time'] ?? ''); ?></td>
+                                        <td><?php echo esc_html('#' . ($entry['order_number'] ?? $entry['order_id'] ?? '')); ?></td>
+                                        <td><?php echo esc_html($entry['ip'] ?? ''); ?></td>
+                                        <td><?php echo esc_html($entry['phone'] ?? ''); ?></td>
+                                        <td><?php echo esc_html($this->format_expiry_datetime((int) ($entry['expires_at'] ?? 0))); ?></td>
+                                        <td>
+                                            <form method="post">
+                                                <?php wp_nonce_field('usp_wcodb_remove_log_nonce'); ?>
+                                                <input type="hidden" name="usp_wcodb_remove_log_btn" value="1">
+                                                <input type="hidden" name="remove_log_order_id" value="<?php echo esc_attr((string) ($entry['order_id'] ?? '')); ?>">
+                                                <input type="hidden" name="remove_log_time" value="<?php echo esc_attr((string) ($entry['time'] ?? '')); ?>">
+                                                <input type="hidden" name="remove_log_sig" value="<?php echo esc_attr($this->create_log_signature((string) ($entry['order_id'] ?? ''), (string) ($entry['time'] ?? ''))); ?>">
+                                                <?php submit_button(__('Remove', 'universal-sms-pro-gateway'), 'delete', '', false); ?>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
                     </table>
-                    <?php submit_button(__('Add Manual Block', 'universal-sms-pro-gateway'), 'secondary'); ?>
-                </form>
-            </div>
-
-            <div class="usp-card">
-                <h2><?php esc_html_e('Manual Blocked List', 'universal-sms-pro-gateway'); ?></h2>
-                <table class="usp-log-table">
-                    <thead>
-                        <tr>
-                            <th><?php esc_html_e('Added Time', 'universal-sms-pro-gateway'); ?></th>
-                            <th><?php esc_html_e('IP', 'universal-sms-pro-gateway'); ?></th>
-                            <th><?php esc_html_e('Phone', 'universal-sms-pro-gateway'); ?></th>
-                            <th><?php esc_html_e('Note', 'universal-sms-pro-gateway'); ?></th>
-                            <th><?php esc_html_e('Action', 'universal-sms-pro-gateway'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($manual_list)) : ?>
-                            <tr><td colspan="5"><?php esc_html_e('No manual blocks found.', 'universal-sms-pro-gateway'); ?></td></tr>
-                        <?php else : ?>
-                            <?php foreach ($manual_list as $key => $entry) : ?>
-                                <tr>
-                                    <td><?php echo esc_html($entry['time'] ?? ''); ?></td>
-                                    <td><?php echo esc_html($entry['ip'] ?? ''); ?></td>
-                                    <td><?php echo esc_html($entry['phone'] ?? ''); ?></td>
-                                    <td><?php echo esc_html($entry['note'] ?? ''); ?></td>
-                                    <td>
-                                        <form method="post">
-                                            <?php wp_nonce_field('usp_wcodb_unblock_nonce'); ?>
-                                            <input type="hidden" name="usp_wcodb_unblock_action_btn" value="1">
-                                            <input type="hidden" name="unblock_key" value="<?php echo esc_attr($key); ?>">
-                                            <?php submit_button(__('Unblock', 'universal-sms-pro-gateway'), 'delete', '', false); ?>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="usp-card">
-                <h2><?php esc_html_e('Automatic Block Log', 'universal-sms-pro-gateway'); ?></h2>
-                <table class="usp-log-table">
-                    <thead>
-                        <tr>
-                            <th><?php esc_html_e('Time', 'universal-sms-pro-gateway'); ?></th>
-                            <th><?php esc_html_e('Order', 'universal-sms-pro-gateway'); ?></th>
-                            <th><?php esc_html_e('IP', 'universal-sms-pro-gateway'); ?></th>
-                            <th><?php esc_html_e('Phone', 'universal-sms-pro-gateway'); ?></th>
-                            <th><?php esc_html_e('Expires', 'universal-sms-pro-gateway'); ?></th>
-                            <th><?php esc_html_e('Action', 'universal-sms-pro-gateway'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($log)) : ?>
-                            <tr><td colspan="6"><?php esc_html_e('No automatic block logs found.', 'universal-sms-pro-gateway'); ?></td></tr>
-                        <?php else : ?>
-                            <?php foreach ($log as $entry) : ?>
-                                <tr>
-                                    <td><?php echo esc_html($entry['time'] ?? ''); ?></td>
-                                    <td><?php echo esc_html('#' . ($entry['order_number'] ?? $entry['order_id'] ?? '')); ?></td>
-                                    <td><?php echo esc_html($entry['ip'] ?? ''); ?></td>
-                                    <td><?php echo esc_html($entry['phone'] ?? ''); ?></td>
-                                    <td><?php echo esc_html($this->format_expiry_datetime((int) ($entry['expires_at'] ?? 0))); ?></td>
-                                    <td>
-                                        <form method="post">
-                                            <?php wp_nonce_field('usp_wcodb_remove_log_nonce'); ?>
-                                            <input type="hidden" name="usp_wcodb_remove_log_btn" value="1">
-                                            <input type="hidden" name="remove_log_order_id" value="<?php echo esc_attr((string) ($entry['order_id'] ?? '')); ?>">
-                                            <input type="hidden" name="remove_log_time" value="<?php echo esc_attr((string) ($entry['time'] ?? '')); ?>">
-                                            <input type="hidden" name="remove_log_sig" value="<?php echo esc_attr($this->create_log_signature((string) ($entry['order_id'] ?? ''), (string) ($entry['time'] ?? ''))); ?>">
-                                            <?php submit_button(__('Remove', 'universal-sms-pro-gateway'), 'delete', '', false); ?>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-                <form method="post" style="margin-top:16px;">
-                    <?php wp_nonce_field('usp_wcodb_clear_action'); ?>
-                    <input type="hidden" name="usp_wcodb_clear_all" value="1">
-                    <?php submit_button(__('Clear Logs and Manual Blocks', 'universal-sms-pro-gateway'), 'delete'); ?>
-                </form>
+                    <form method="post" class="hkdev-form-actions">
+                        <?php wp_nonce_field('usp_wcodb_clear_action'); ?>
+                        <input type="hidden" name="usp_wcodb_clear_all" value="1">
+                        <?php submit_button(__('Clear Logs and Manual Blocks', 'universal-sms-pro-gateway'), 'delete'); ?>
+                    </form>
+                </div>
             </div>
         </div>
         <?php

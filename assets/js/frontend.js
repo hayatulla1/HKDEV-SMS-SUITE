@@ -1,7 +1,59 @@
 jQuery(function ($) {
-    let isVerified = Boolean(uspSmsData.isVerified);
+    const config = window.uspSmsData || {};
+    const messages = config.messages || {};
+    let isVerified = Boolean(config.isVerified);
+    let timerId = null;
+    let secondsRemaining = 0;
     const $verifyButton = $('#sib_verify');
     const defaultVerifyText = $verifyButton.text();
+    const $timer = $('#sib_otp_timer');
+
+    function clearTimer() {
+        if (timerId) {
+            window.clearInterval(timerId);
+            timerId = null;
+        }
+    }
+
+    function formatTime(totalSeconds) {
+        const safeSeconds = Math.max(0, parseInt(totalSeconds, 10) || 0);
+        const minutes = Math.floor(safeSeconds / 60);
+        const seconds = safeSeconds % 60;
+        return minutes + ':' + String(seconds).padStart(2, '0');
+    }
+
+    function renderTimer() {
+        if (!$timer.length) {
+            return;
+        }
+
+        if (secondsRemaining <= 0) {
+            $timer.text(messages.otpExpired || 'OTP expired. Please request a new one.');
+            return;
+        }
+
+        const template = messages.otpExpiresIn || 'Code expires in %s';
+        $timer.text(template.replace('%s', formatTime(secondsRemaining)));
+    }
+
+    function startTimer(seconds) {
+        clearTimer();
+        secondsRemaining = parseInt(seconds, 10) || 0;
+        renderTimer();
+
+        if (secondsRemaining <= 0) {
+            return;
+        }
+
+        timerId = window.setInterval(function () {
+            secondsRemaining -= 1;
+            renderTimer();
+
+            if (secondsRemaining <= 0) {
+                clearTimer();
+            }
+        }, 1000);
+    }
 
     function setMessage(message, type) {
         const $message = $('#sib_msg');
@@ -46,26 +98,28 @@ jQuery(function ($) {
         const normalizedPhone = String(phone || '').replace(/\D+/g, '');
 
         if (!normalizedPhone) {
-            setMessage(uspSmsData.messages.phoneRequired, 'error');
+            setMessage(messages.phoneRequired, 'error');
             setVerifyButtonState(false, defaultVerifyText);
             return;
         }
 
-        setMessage(uspSmsData.messages.sendingOtp, 'info');
+        setMessage(messages.sendingOtp, 'info');
+        $timer.text('');
 
-        $.post(uspSmsData.ajaxUrl, {
+        $.post(config.ajaxUrl, {
             action: 'sib_send_otp',
             phone,
-            nonce: uspSmsData.nonce,
+            nonce: config.nonce,
         }, function (response) {
             if (response.success) {
-                setMessage(uspSmsData.messages.otpSent, 'success');
+                setMessage(messages.otpSent, 'success');
+                startTimer(config.expirySeconds);
                 return;
             }
 
-            setMessage(response.data || uspSmsData.messages.sendFailed, 'error');
+            setMessage(response.data || messages.sendFailed, 'error');
         }).fail(function () {
-            setMessage(uspSmsData.messages.sendFailed, 'error');
+            setMessage(messages.sendFailed, 'error');
         }).always(function () {
             setVerifyButtonState(false, defaultVerifyText);
         });
@@ -76,27 +130,29 @@ jQuery(function ($) {
         const normalizedOtp = String(otp || '').replace(/\D+/g, '');
 
         if (!normalizedOtp) {
-            setMessage(uspSmsData.messages.invalidOtp, 'error');
+            setMessage(messages.invalidOtp, 'error');
             return;
         }
 
-        setVerifyButtonState(true, uspSmsData.messages.verifyingOtp || defaultVerifyText);
+        setVerifyButtonState(true, messages.verifyingOtp || defaultVerifyText);
 
-        $.post(uspSmsData.ajaxUrl, {
+        $.post(config.ajaxUrl, {
             action: 'sib_verify_otp',
             otp: normalizedOtp,
-            nonce: uspSmsData.nonce,
+            nonce: config.nonce,
         }, function (response) {
             if (response.success) {
                 isVerified = true;
+                clearTimer();
+                $timer.text('');
                 $('#sib-otp-overlay').hide().attr('aria-hidden', 'true');
                 $('form.checkout').trigger('submit');
                 return;
             }
 
-            setMessage(response.data || uspSmsData.messages.invalidOtp, 'error');
+            setMessage(response.data || messages.invalidOtp, 'error');
         }).fail(function () {
-            setMessage(uspSmsData.messages.invalidOtp, 'error');
+            setMessage(messages.invalidOtp, 'error');
         }).always(function () {
             if (!isVerified) {
                 setVerifyButtonState(false, defaultVerifyText);
