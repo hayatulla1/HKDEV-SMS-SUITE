@@ -70,6 +70,7 @@ class Universal_SMS_Pro
             'messages'   => [
                 'invalidOtp' => __('Invalid OTP', 'universal-sms-pro-gateway'),
                 'sendFailed' => __('Failed to send OTP.', 'universal-sms-pro-gateway'),
+                'phoneRequired' => __('Please enter a valid phone number.', 'universal-sms-pro-gateway'),
             ],
         ]);
     }
@@ -113,6 +114,12 @@ class Universal_SMS_Pro
         $ids = array_filter(array_map('trim', explode(',', sanitize_text_field($value))), static function ($id) {
             return ctype_digit((string) $id);
         });
+
+        if (function_exists('wc_get_product')) {
+            $ids = array_filter($ids, static function ($id) {
+                return (bool) wc_get_product((int) $id);
+            });
+        }
 
         return implode(',', $ids);
     }
@@ -395,7 +402,7 @@ class Universal_SMS_Pro
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Universal SMS Pro OTP fallback used: ' . $exception->getMessage());
             }
-            $otp = wp_rand(100000, 999999);
+            $otp = $this->generate_fallback_otp();
         }
 
         WC()->session->set('sib_otp', $otp);
@@ -513,5 +520,20 @@ class Universal_SMS_Pro
             </div>
         </div>
         <?php
+    }
+
+    private function generate_fallback_otp()
+    {
+        if (function_exists('openssl_random_pseudo_bytes')) {
+            $is_strong = false;
+            $bytes = openssl_random_pseudo_bytes(4, $is_strong);
+
+            if ($bytes !== false && $is_strong) {
+                $random_number = unpack('N', $bytes)[1];
+                return 100000 + ($random_number % 900000);
+            }
+        }
+
+        return wp_rand(100000, 999999);
     }
 }

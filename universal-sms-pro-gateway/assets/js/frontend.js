@@ -13,7 +13,7 @@ jQuery(function ($) {
         const normalizedPhone = String(phone || '').replace(/\D+/g, '');
 
         if (!normalizedPhone) {
-            $('#sib_msg').text(uspSmsData.messages.sendFailed);
+            $('#sib_msg').text(uspSmsData.messages.phoneRequired);
             return;
         }
 
