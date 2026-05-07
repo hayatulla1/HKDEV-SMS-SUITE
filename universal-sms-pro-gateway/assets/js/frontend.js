@@ -10,6 +10,12 @@ jQuery(function ($) {
         $('#sib-otp-overlay').css('display', 'flex').attr('aria-hidden', 'false');
 
         const phone = $('#billing_phone').val();
+        const normalizedPhone = String(phone || '').replace(/\D+/g, '');
+
+        if (!normalizedPhone) {
+            $('#sib_msg').text(uspSmsData.messages.sendFailed);
+            return;
+        }
 
         $.post(uspSmsData.ajaxUrl, {
             action: 'sib_send_otp',

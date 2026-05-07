@@ -391,7 +391,7 @@ class Universal_SMS_Pro
 
         try {
             $otp = random_int(100000, 999999);
-        } catch (Exception $exception) {
+        } catch (Throwable $exception) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Universal SMS Pro OTP fallback used: ' . $exception->getMessage());
             }
