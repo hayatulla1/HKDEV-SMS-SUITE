@@ -62,6 +62,7 @@ class HKDEV_SMS_Pro
                 'balanceSuccess' => __('Balance updated.', 'universal-sms-pro-gateway'),
                 'testSending' => __('Sending test SMS...', 'universal-sms-pro-gateway'),
                 'testSent' => __('Test SMS sent.', 'universal-sms-pro-gateway'),
+                'testError' => __('Failed to send test SMS.', 'universal-sms-pro-gateway'),
             ],
         ]);
     }
