@@ -156,10 +156,6 @@ class USP_WC_Order_Delay_Blocker
         if (empty($ip)) {
             $ip = (string) get_post_meta($order_id, '_customer_ip_address', true);
         }
-        if (empty($ip)) {
-            $ip = $this->get_user_ip();
-        }
-
         $phone = $this->normalize_phone((string) $order->get_billing_phone());
         $order_number = method_exists($order, 'get_order_number') ? $order->get_order_number() : (string) $order_id;
 
@@ -359,7 +355,8 @@ class USP_WC_Order_Delay_Blocker
 
     private function handle_admin_actions()
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !current_user_can('manage_woocommerce')) {
+        $request_method = isset($_SERVER['REQUEST_METHOD']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_METHOD'])) : '';
+        if ($request_method !== 'POST' || !current_user_can('manage_woocommerce')) {
             return;
         }
 
@@ -464,6 +461,7 @@ class USP_WC_Order_Delay_Blocker
             if ($found) {
                 update_option(self::OPTION_AUTOMATIC_BLOCK_LOG, array_values($log));
                 $this->redirect_with_message('log_removed');
+                return;
             }
 
             $this->redirect_with_message('log_not_found');
@@ -521,7 +519,7 @@ class USP_WC_Order_Delay_Blocker
     {
         $keys = ['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'];
         foreach ($keys as $key) {
-            if (empty($_SERVER[$key])) {
+            if (!isset($_SERVER[$key]) || empty($_SERVER[$key])) {
                 continue;
             }
 
@@ -547,12 +545,8 @@ class USP_WC_Order_Delay_Blocker
 
     private function hash_key($input)
     {
+        $this->initialize_salt_key();
         $salt = get_option(self::OPTION_SALT_KEY, '');
-        if (empty($salt)) {
-            $salt = wp_generate_password(32, true, true);
-            update_option(self::OPTION_SALT_KEY, $salt);
-        }
-
         return hash('sha256', $salt . '::' . $input);
     }
 
