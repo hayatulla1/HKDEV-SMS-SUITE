@@ -334,7 +334,13 @@ class USP_WC_Order_Delay_Blocker
                                         <form method="post">
                                             <?php wp_nonce_field('usp_wcodb_remove_log_nonce'); ?>
                                             <input type="hidden" name="usp_wcodb_remove_log_btn" value="1">
-                                            <input type="hidden" name="remove_log_index" value="<?php echo esc_attr((string) ($entry['order_id'] ?? '') . '||' . (string) ($entry['time'] ?? '')); ?>">
+                                            <?php
+                                            $remove_token = base64_encode((string) wp_json_encode([
+                                                'order_id' => (string) ($entry['order_id'] ?? ''),
+                                                'time' => (string) ($entry['time'] ?? ''),
+                                            ]));
+                                            ?>
+                                            <input type="hidden" name="remove_log_index" value="<?php echo esc_attr($remove_token); ?>">
                                             <?php submit_button(__('Remove', 'universal-sms-pro-gateway'), 'delete', '', false); ?>
                                         </form>
                                     </td>
@@ -424,9 +430,9 @@ class USP_WC_Order_Delay_Blocker
         if (isset($_POST['usp_wcodb_remove_log_btn'])) {
             check_admin_referer('usp_wcodb_remove_log_nonce');
             $remove_index = isset($_POST['remove_log_index']) ? sanitize_text_field(wp_unslash($_POST['remove_log_index'])) : '';
-            $parts = explode('||', $remove_index);
-            $order_id_part = trim($parts[0] ?? '');
-            $time_part = trim($parts[1] ?? '');
+            $decoded = json_decode(base64_decode($remove_index, true), true);
+            $order_id_part = isset($decoded['order_id']) ? trim((string) $decoded['order_id']) : '';
+            $time_part = isset($decoded['time']) ? trim((string) $decoded['time']) : '';
 
             $log = get_option(self::OPTION_AUTOMATIC_BLOCK_LOG, []);
             $found = false;
@@ -553,7 +559,7 @@ class USP_WC_Order_Delay_Blocker
     private function initialize_salt_key()
     {
         if (!get_option(self::OPTION_SALT_KEY, '')) {
-            update_option(self::OPTION_SALT_KEY, wp_generate_password(32, true, true));
+            add_option(self::OPTION_SALT_KEY, wp_generate_password(32, true, true), '', false);
         }
     }
 
