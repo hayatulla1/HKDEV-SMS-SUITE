@@ -44,6 +44,14 @@
     font-weight: 600;
 }
 
+.sib-otp-timer {
+    margin: 0 0 14px;
+    min-height: 20px;
+    color: #0369a1;
+    font-size: 13px;
+    font-weight: 600;
+}
+
 #sib_otp_code {
     width: 100%;
     text-align: center;
