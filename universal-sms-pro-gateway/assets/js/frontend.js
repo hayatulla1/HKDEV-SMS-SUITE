@@ -1,5 +1,25 @@
 jQuery(function ($) {
     let isVerified = Boolean(uspSmsData.isVerified);
+    const $verifyButton = $('#sib_verify');
+    const defaultVerifyText = $verifyButton.text();
+
+    function setMessage(message, type) {
+        const $message = $('#sib_msg');
+        $message.removeClass('is-error is-success');
+
+        if (!message) {
+            $message.text('');
+            return;
+        }
+
+        $message.text(message);
+        if (type === 'success') {
+            $message.addClass('is-success');
+            return;
+        }
+
+        $message.addClass('is-error');
+    }
 
     $('form.checkout').on('submit', function (e) {
         if (isVerified) {
@@ -8,12 +28,15 @@ jQuery(function ($) {
 
         e.preventDefault();
         $('#sib-otp-overlay').css('display', 'flex').attr('aria-hidden', 'false');
+        setMessage('');
+        $verifyButton.prop('disabled', true).text(uspSmsData.messages.sendingOtp || defaultVerifyText);
 
         const phone = $('#billing_phone').val();
         const normalizedPhone = String(phone || '').replace(/\D+/g, '');
 
         if (!normalizedPhone) {
-            $('#sib_msg').text(uspSmsData.messages.phoneRequired);
+            setMessage(uspSmsData.messages.phoneRequired, 'error');
+            $verifyButton.prop('disabled', false).text(defaultVerifyText);
             return;
         }
 
@@ -22,20 +45,33 @@ jQuery(function ($) {
             phone,
             nonce: uspSmsData.nonce,
         }, function (response) {
-            if (!response.success) {
-                $('#sib_msg').text(response.data || uspSmsData.messages.sendFailed);
+            if (response.success) {
+                setMessage(uspSmsData.messages.otpSent, 'success');
+                return;
             }
+
+            setMessage(response.data || uspSmsData.messages.sendFailed, 'error');
         }).fail(function () {
-            $('#sib_msg').text(uspSmsData.messages.sendFailed);
+            setMessage(uspSmsData.messages.sendFailed, 'error');
+        }).always(function () {
+            $verifyButton.prop('disabled', false).text(defaultVerifyText);
         });
     });
 
     $('#sib_verify').on('click', function () {
         const otp = $('#sib_otp_code').val();
+        const normalizedOtp = String(otp || '').replace(/\D+/g, '');
+
+        if (!normalizedOtp) {
+            setMessage(uspSmsData.messages.invalidOtp, 'error');
+            return;
+        }
+
+        $verifyButton.prop('disabled', true).text(uspSmsData.messages.verifyingOtp || defaultVerifyText);
 
         $.post(uspSmsData.ajaxUrl, {
             action: 'sib_verify_otp',
-            otp,
+            otp: normalizedOtp,
             nonce: uspSmsData.nonce,
         }, function (response) {
             if (response.success) {
@@ -45,9 +81,13 @@ jQuery(function ($) {
                 return;
             }
 
-            $('#sib_msg').text(response.data || uspSmsData.messages.invalidOtp);
+            setMessage(response.data || uspSmsData.messages.invalidOtp, 'error');
         }).fail(function () {
-            $('#sib_msg').text(uspSmsData.messages.invalidOtp);
+            setMessage(uspSmsData.messages.invalidOtp, 'error');
+        }).always(function () {
+            if (!isVerified) {
+                $verifyButton.prop('disabled', false).text(defaultVerifyText);
+            }
         });
     });
 });

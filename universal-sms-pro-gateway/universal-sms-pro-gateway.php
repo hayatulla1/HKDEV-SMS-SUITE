@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: Universal SMS Pro Gateway (Any Provider & OTP)
- * Description: Multi-provider SMS solution for WordPress with failover, logs, and WooCommerce OTP verification.
+ * Plugin Name: HKDEV
+ * Description: HKDEV SMS solution for WordPress with failover, logs, and WooCommerce OTP verification.
  * Version: 4.0.0
  * Author: Gemini
  * Text Domain: universal-sms-pro-gateway
