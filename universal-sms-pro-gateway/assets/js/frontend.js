@@ -39,7 +39,7 @@ jQuery(function ($) {
 
         e.preventDefault();
         $('#sib-otp-overlay').css('display', 'flex').attr('aria-hidden', 'false');
-        setMessage(uspSmsData.messages.sendingOtp, 'info');
+        setMessage('');
         setVerifyButtonState(true, defaultVerifyText);
 
         const phone = $('#billing_phone').val();
@@ -50,6 +50,8 @@ jQuery(function ($) {
             setVerifyButtonState(false, defaultVerifyText);
             return;
         }
+
+        setMessage(uspSmsData.messages.sendingOtp, 'info');
 
         $.post(uspSmsData.ajaxUrl, {
             action: 'sib_send_otp',
