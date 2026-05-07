@@ -21,6 +21,13 @@ jQuery(function ($) {
         $message.addClass('is-error');
     }
 
+    function setVerifyButtonState(isBusy, text) {
+        $verifyButton
+            .prop('disabled', isBusy)
+            .attr('aria-busy', isBusy ? 'true' : 'false')
+            .text(text);
+    }
+
     $('form.checkout').on('submit', function (e) {
         if (isVerified) {
             return;
@@ -29,14 +36,14 @@ jQuery(function ($) {
         e.preventDefault();
         $('#sib-otp-overlay').css('display', 'flex').attr('aria-hidden', 'false');
         setMessage('');
-        $verifyButton.prop('disabled', true).text(uspSmsData.messages.sendingOtp || defaultVerifyText);
+        setVerifyButtonState(true, uspSmsData.messages.sendingOtp || defaultVerifyText);
 
         const phone = $('#billing_phone').val();
         const normalizedPhone = String(phone || '').replace(/\D+/g, '');
 
         if (!normalizedPhone) {
             setMessage(uspSmsData.messages.phoneRequired, 'error');
-            $verifyButton.prop('disabled', false).text(defaultVerifyText);
+            setVerifyButtonState(false, defaultVerifyText);
             return;
         }
 
@@ -54,7 +61,7 @@ jQuery(function ($) {
         }).fail(function () {
             setMessage(uspSmsData.messages.sendFailed, 'error');
         }).always(function () {
-            $verifyButton.prop('disabled', false).text(defaultVerifyText);
+            setVerifyButtonState(false, defaultVerifyText);
         });
     });
 
@@ -67,7 +74,7 @@ jQuery(function ($) {
             return;
         }
 
-        $verifyButton.prop('disabled', true).text(uspSmsData.messages.verifyingOtp || defaultVerifyText);
+        setVerifyButtonState(true, uspSmsData.messages.verifyingOtp || defaultVerifyText);
 
         $.post(uspSmsData.ajaxUrl, {
             action: 'sib_verify_otp',
@@ -86,7 +93,7 @@ jQuery(function ($) {
             setMessage(uspSmsData.messages.invalidOtp, 'error');
         }).always(function () {
             if (!isVerified) {
-                $verifyButton.prop('disabled', false).text(defaultVerifyText);
+                setVerifyButtonState(false, defaultVerifyText);
             }
         });
     });

@@ -515,9 +515,9 @@ class Universal_SMS_Pro
         }
         ?>
         <div id="sib-otp-overlay" class="sib-otp-overlay" aria-hidden="true">
-            <div class="sib-otp-modal" role="dialog" aria-modal="true" aria-labelledby="sib-otp-title">
+            <div class="sib-otp-modal" role="dialog" aria-modal="true" aria-labelledby="sib-otp-title" aria-describedby="sib-otp-subtitle">
                 <h3 id="sib-otp-title"><?php esc_html_e('Phone Verification', 'universal-sms-pro-gateway'); ?></h3>
-                <p class="sib-otp-subtitle"><?php esc_html_e('Enter the OTP sent to your phone to complete checkout securely.', 'universal-sms-pro-gateway'); ?></p>
+                <p id="sib-otp-subtitle" class="sib-otp-subtitle"><?php esc_html_e('Enter the OTP sent to your phone to complete checkout securely.', 'universal-sms-pro-gateway'); ?></p>
                 <label for="sib_otp_code" class="sib-otp-label"><?php esc_html_e('OTP Code', 'universal-sms-pro-gateway'); ?></label>
                 <input type="text" id="sib_otp_code" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="<?php esc_attr_e('Enter OTP', 'universal-sms-pro-gateway'); ?>">
                 <button type="button" id="sib_verify"><?php esc_html_e('Verify & Complete Order', 'universal-sms-pro-gateway'); ?></button>
