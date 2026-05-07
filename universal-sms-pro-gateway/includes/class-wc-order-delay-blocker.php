@@ -559,24 +559,36 @@ class USP_WC_Order_Delay_Blocker
 
     private function hash_key($input)
     {
-        $this->initialize_salt_key();
-        $salt = get_option(self::OPTION_SALT_KEY, '');
+        $salt = $this->get_or_create_salt();
         return hash('sha256', $salt . '::' . $input);
     }
 
     private function initialize_salt_key()
     {
-        if (!get_option(self::OPTION_SALT_KEY, '')) {
-            $candidate = wp_generate_password(32, true, true);
-            if (!add_option(self::OPTION_SALT_KEY, $candidate, '', false) && !get_option(self::OPTION_SALT_KEY, '')) {
-                update_option(self::OPTION_SALT_KEY, $candidate);
-            }
-        }
+        $this->get_or_create_salt();
     }
 
     private function create_log_signature($order_id, $time)
     {
-        return hash_hmac('sha256', (string) $order_id . '|' . (string) $time, wp_salt('auth'));
+        return hash_hmac('sha256', (string) $order_id . '|' . (string) $time, $this->get_or_create_salt());
+    }
+
+    private function get_or_create_salt()
+    {
+        $salt = (string) get_option(self::OPTION_SALT_KEY, '');
+        if ($salt !== '') {
+            return $salt;
+        }
+
+        $candidate = wp_generate_password(32, true, true);
+        add_option(self::OPTION_SALT_KEY, $candidate, '', false);
+        $salt = (string) get_option(self::OPTION_SALT_KEY, '');
+
+        if ($salt === '') {
+            $salt = (string) wp_salt('auth');
+        }
+
+        return $salt;
     }
 
     private function get_ip_transient_key($ip)
