@@ -205,7 +205,12 @@ class Universal_SMS_Pro
             $body_raw = wp_remote_retrieve_body($response);
             $body     = json_decode($body_raw, true);
 
-            if ((isset($body['status']) && strtolower((string) $body['status']) === 'success') || strpos(strtolower($body_raw), 'success') !== false) {
+            $normalized_raw  = strtolower(trim((string) $body_raw));
+            $status_success  = isset($body['status']) && strtolower((string) $body['status']) === 'success';
+            $exact_success   = in_array($normalized_raw, ['success', 'ok', 'sent', '1000'], true);
+            $json_success    = (bool) preg_match('/"status"\s*:\s*"success"/i', (string) $body_raw);
+
+            if ($status_success || $exact_success || $json_success) {
                 $this->log_sms($number, $message, 'Success', "Gateway: {$api_url} | Sender: {$sid}");
                 return ['status' => 'success', 'message' => 'SMS Sent Successfully'];
             }
@@ -221,6 +226,9 @@ class Universal_SMS_Pro
     public function main_page()
     {
         $tab = isset($_GET['tab']) ? sanitize_text_field(wp_unslash($_GET['tab'])) : 'settings';
+        if (!in_array($tab, ['settings', 'templates', 'logs'], true)) {
+            $tab = 'settings';
+        }
         $logs = get_option($this->log_option, []);
         ?>
         <div class="wrap usp-wrap">
@@ -375,7 +383,11 @@ class Universal_SMS_Pro
             wp_send_json_error(__('Phone number is required.', 'universal-sms-pro-gateway'));
         }
 
-        $otp = wp_rand(100000, 999999);
+        try {
+            $otp = random_int(100000, 999999);
+        } catch (Exception $exception) {
+            $otp = wp_rand(100000, 999999);
+        }
 
         WC()->session->set('sib_otp', $otp);
         WC()->session->set('sib_otp_verified', false);

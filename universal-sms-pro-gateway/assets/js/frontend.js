@@ -15,6 +15,10 @@ jQuery(function ($) {
             action: 'sib_send_otp',
             phone,
             nonce: uspSmsData.nonce,
+        }, function (response) {
+            if (!response.success) {
+                $('#sib_msg').text(response.data || uspSmsData.messages.sendFailed);
+            }
         }).fail(function () {
             $('#sib_msg').text(uspSmsData.messages.sendFailed);
         });
