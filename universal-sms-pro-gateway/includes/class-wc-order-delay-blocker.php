@@ -91,7 +91,7 @@ class USP_WC_Order_Delay_Blocker
             $comb_key = $this->get_combined_transient_key($ip, $phone);
             $data = get_transient($comb_key);
             if (!empty($data) && !empty($data['expires_at'])) {
-                $remaining = max(0, (int) $data['expires_at'] - current_time('timestamp'));
+                $remaining = $this->calculate_remaining_time((int) $data['expires_at']);
                 if ($remaining > 0) {
                     wc_add_notice(sprintf(
                         __('You recently placed an order from this IP and phone. Please wait %s before placing another order.', 'universal-sms-pro-gateway'),
@@ -104,7 +104,7 @@ class USP_WC_Order_Delay_Blocker
 
         $ip_data = !empty($ip) ? get_transient($this->get_ip_transient_key($ip)) : false;
         if (!empty($ip_data) && !empty($ip_data['expires_at'])) {
-            $remaining = max(0, (int) $ip_data['expires_at'] - current_time('timestamp'));
+            $remaining = $this->calculate_remaining_time((int) $ip_data['expires_at']);
             if ($remaining > 0) {
                 wc_add_notice(sprintf(
                     __('Orders from your IP are temporarily blocked for %s.', 'universal-sms-pro-gateway'),
@@ -117,7 +117,7 @@ class USP_WC_Order_Delay_Blocker
         if (!empty($phone) && $this->is_valid_bd_phone($phone)) {
             $phone_data = get_transient($this->get_phone_transient_key($phone));
             if (!empty($phone_data) && !empty($phone_data['expires_at'])) {
-                $remaining = max(0, (int) $phone_data['expires_at'] - current_time('timestamp'));
+                $remaining = $this->calculate_remaining_time((int) $phone_data['expires_at']);
                 if ($remaining > 0) {
                     wc_add_notice(sprintf(
                         __('This phone number is temporarily blocked for %s.', 'universal-sms-pro-gateway'),
@@ -382,7 +382,7 @@ class USP_WC_Order_Delay_Blocker
             }
 
             $list = get_option(self::OPTION_MANUAL_BLOCKED_LIST, []);
-            $key = 'usp_wcodb_manual_' . $this->hash_key($ip . '::' . $phone);
+            $key = 'usp_wcodb_manual_' . $this->hash_key('ip:' . $ip . '|ph:' . $phone);
             $list[$key] = [
                 'ip' => $ip,
                 'phone' => $phone,
@@ -557,6 +557,11 @@ class USP_WC_Order_Delay_Blocker
         return max(MINUTE_IN_SECONDS, $seconds);
     }
 
+    private function calculate_remaining_time($expires_at)
+    {
+        return max(0, (int) $expires_at - current_time('timestamp'));
+    }
+
     private function hash_key($input)
     {
         $salt = $this->get_or_create_salt();
@@ -585,7 +590,12 @@ class USP_WC_Order_Delay_Blocker
         $salt = (string) get_option(self::OPTION_SALT_KEY, '');
 
         if ($salt === '') {
-            $salt = (string) wp_salt('auth');
+            update_option(self::OPTION_SALT_KEY, $candidate);
+            $salt = (string) get_option(self::OPTION_SALT_KEY, '');
+        }
+
+        if ($salt === '') {
+            $salt = hash('sha256', (string) site_url('/'));
         }
 
         return $salt;
