@@ -51,7 +51,7 @@ class USP_WC_Order_Delay_Blocker
         register_setting('usp_wcodb_settings_group', self::OPTION_DURATION_DAYS, ['type' => 'integer', 'sanitize_callback' => 'absint', 'default' => self::DEFAULT_DURATION_DAYS]);
         register_setting('usp_wcodb_settings_group', self::OPTION_COMBINED_BLOCK, ['type' => 'string', 'sanitize_callback' => [$this, 'sanitize_checkbox'], 'default' => 'no']);
 
-        $this->hash_key('');
+        $this->initialize_salt_key();
     }
 
     public function sanitize_checkbox($value)
@@ -379,7 +379,7 @@ class USP_WC_Order_Delay_Blocker
             }
 
             $list = get_option(self::OPTION_MANUAL_BLOCKED_LIST, []);
-            $key = 'usp_wcodb_manual_' . $this->hash_key($ip . '::' . $phone . '::' . microtime(true));
+            $key = 'usp_wcodb_manual_' . $this->hash_key($ip . '::' . $phone);
             $list[$key] = [
                 'ip' => $ip,
                 'phone' => $phone,
@@ -400,7 +400,6 @@ class USP_WC_Order_Delay_Blocker
                 update_option(self::OPTION_MANUAL_BLOCKED_LIST, $manual_list);
             }
 
-            delete_transient($key);
             $this->redirect_with_message('unblocked');
         }
 
@@ -555,6 +554,13 @@ class USP_WC_Order_Delay_Blocker
         }
 
         return hash('sha256', $salt . '::' . $input);
+    }
+
+    private function initialize_salt_key()
+    {
+        if (!get_option(self::OPTION_SALT_KEY, '')) {
+            update_option(self::OPTION_SALT_KEY, wp_generate_password(32, true, true));
+        }
     }
 
     private function get_ip_transient_key($ip)
