@@ -20,5 +20,6 @@ Professional WordPress plugin structure for an OTP-enabled universal SMS gateway
 - Multiple sender IDs with failover
 - OTP verification for selected WooCommerce products
 - Order confirmation and status SMS notifications
+- WooCommerce order delay blocker (IP/phone, manual block, automatic logs)
 - Admin logs (last 50 requests)
 - Separate PHP/CSS/JS files with cleaner organization
