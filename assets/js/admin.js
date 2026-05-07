@@ -7,7 +7,7 @@ jQuery(function ($) {
     const SUCCESS_COLOR = '#047857';
 
     function getErrorMessage(response, messageFallback, defaultMessage) {
-        if (response && response.data) {
+        if (response && response.success === false && typeof response.data === 'string' && response.data !== '') {
             return response.data;
         }
 
@@ -41,7 +41,7 @@ jQuery(function ($) {
             action: 'hkdev_check_balance',
             nonce: nonce,
         }).done(function (response) {
-            if (!response || !response.success || !response.data) {
+            if (!response || response.success !== true || response.data === null || response.data === undefined) {
                 const errorMessage = getErrorMessage(response, messages.balanceError, 'Unable to fetch balance.');
                 setStatus($status, errorMessage, true);
                 return;
