@@ -100,7 +100,7 @@ class HKDEV_SMS_Pro
             'ajaxUrl'    => admin_url('admin-ajax.php'),
             'nonce'      => wp_create_nonce('sib_otp_nonce'),
             'isVerified' => (bool) WC()->session->get('sib_otp_verified'),
-            'expirySeconds' => max(1, absint(get_option('hkdev_otp_expiry_minutes', 10))) * MINUTE_IN_SECONDS,
+            'expirySeconds' => max(1, absint(get_option('hkdev_otp_expiry_minutes', 10))) * 60,
             'messages'   => [
                 'invalidOtp' => __('Invalid OTP', 'universal-sms-pro-gateway'),
                 'sendFailed' => __('Failed to send OTP.', 'universal-sms-pro-gateway'),

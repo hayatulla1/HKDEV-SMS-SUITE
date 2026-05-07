@@ -55,6 +55,10 @@ jQuery(function ($) {
         }, 1000);
     }
 
+    function clearTimerDisplay() {
+        $timer.text('');
+    }
+
     function setMessage(message, type) {
         const $message = $('#sib_msg');
         $message.removeClass('is-error is-success is-info');
@@ -104,7 +108,7 @@ jQuery(function ($) {
         }
 
         setMessage(messages.sendingOtp, 'info');
-        $timer.text('');
+        clearTimerDisplay();
 
         $.post(config.ajaxUrl, {
             action: 'sib_send_otp',
@@ -144,7 +148,7 @@ jQuery(function ($) {
             if (response.success) {
                 isVerified = true;
                 clearTimer();
-                $timer.text('');
+                clearTimerDisplay();
                 $('#sib-otp-overlay').hide().attr('aria-hidden', 'true');
                 $('form.checkout').trigger('submit');
                 return;
