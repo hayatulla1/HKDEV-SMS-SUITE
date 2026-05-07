@@ -54,7 +54,7 @@ jQuery(function ($) {
         const $phone = $('#hkdev-test-phone');
 
         if (!ajaxUrl || !nonce) {
-            setStatus($status, messages.balanceError || 'Unable to process request.', true);
+            setStatus($status, messages.testError || 'Unable to process request.', true);
             return;
         }
 
@@ -67,13 +67,13 @@ jQuery(function ($) {
             nonce: nonce,
         }).done(function (response) {
             if (!response || !response.success) {
-                setStatus($status, (response && response.data) || messages.balanceError || 'Failed to send test SMS.', true);
+                setStatus($status, (response && response.data) || messages.testError || 'Failed to send test SMS.', true);
                 return;
             }
 
             setStatus($status, response.data || messages.testSent || 'Test SMS sent.', false);
         }).fail(function () {
-            setStatus($status, messages.balanceError || 'Failed to send test SMS.', true);
+            setStatus($status, messages.testError || 'Failed to send test SMS.', true);
         }).always(function () {
             $button.prop('disabled', false);
         });
