@@ -205,10 +205,12 @@ class Universal_SMS_Pro
             $body_raw = wp_remote_retrieve_body($response);
             $body     = json_decode($body_raw, true);
 
-            $normalized_raw  = strtolower(trim((string) $body_raw));
-            $status_success  = isset($body['status']) && strtolower((string) $body['status']) === 'success';
-            $exact_success   = in_array($normalized_raw, ['success', 'ok', 'sent', '1000'], true);
-            if ($status_success || $exact_success) {
+            $normalized_raw      = strtolower(trim((string) $body_raw));
+            $status_success      = isset($body['status']) && strtolower((string) $body['status']) === 'success';
+            $raw_text_success    = in_array($normalized_raw, ['success', 'ok', 'sent'], true);
+            $raw_code_success    = (bool) preg_match('/^1000$/', $normalized_raw);
+            $raw_contains_errors = strpos($normalized_raw, 'error') !== false || strpos($normalized_raw, 'failed') !== false;
+            if ($status_success || (($raw_text_success || $raw_code_success) && !$raw_contains_errors)) {
                 $this->log_sms($number, $message, 'Success', "Gateway: {$api_url} | Sender: {$sid}");
                 return ['status' => 'success', 'message' => 'SMS Sent Successfully'];
             }
@@ -383,7 +385,7 @@ class Universal_SMS_Pro
 
         try {
             $otp = random_int(100000, 999999);
-        } catch (Exception $exception) {
+        } catch (Exception | Error $exception) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Universal SMS Pro OTP fallback used: ' . $exception->getMessage());
             }
