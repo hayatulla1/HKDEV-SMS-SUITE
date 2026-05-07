@@ -253,11 +253,11 @@ class USP_WC_Order_Delay_Blocker
                             <tr>
                                 <th><?php esc_html_e('Enable IP + Phone Combined Block', 'universal-sms-pro-gateway'); ?></th>
                                 <td>
-                                    <label>
-                                        <input type="hidden" name="<?php echo esc_attr(self::OPTION_COMBINED_BLOCK); ?>" value="no">
-                                        <input type="checkbox" name="<?php echo esc_attr(self::OPTION_COMBINED_BLOCK); ?>" value="yes" <?php checked($combined_enabled, 'yes'); ?>>
-                                        <?php esc_html_e('Only block when both IP and phone match the last order', 'universal-sms-pro-gateway'); ?>
-                                    </label>
+                                    <select name="<?php echo esc_attr(self::OPTION_COMBINED_BLOCK); ?>">
+                                        <option value="no" <?php selected($combined_enabled, 'no'); ?>><?php esc_html_e('Disabled', 'universal-sms-pro-gateway'); ?></option>
+                                        <option value="yes" <?php selected($combined_enabled, 'yes'); ?>><?php esc_html_e('Enabled', 'universal-sms-pro-gateway'); ?></option>
+                                    </select>
+                                    <p class="description"><?php esc_html_e('Only block when both IP and phone match the last order.', 'universal-sms-pro-gateway'); ?></p>
                                 </td>
                             </tr>
                         </table>
