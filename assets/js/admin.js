@@ -32,7 +32,8 @@ jQuery(function ($) {
             nonce: nonce,
         }).done(function (response) {
             if (!response || !response.success || !response.data) {
-                setStatus($status, (response && response.data) || messages.balanceError || 'Unable to fetch balance.', true);
+                const errorMessage = response && response.data ? response.data : (messages.balanceError || 'Unable to fetch balance.');
+                setStatus($status, errorMessage, true);
                 return;
             }
 
@@ -67,7 +68,8 @@ jQuery(function ($) {
             nonce: nonce,
         }).done(function (response) {
             if (!response || !response.success) {
-                setStatus($status, (response && response.data) || messages.testError || 'Failed to send test SMS.', true);
+                const errorMessage = response && response.data ? response.data : (messages.testError || 'Failed to send test SMS.');
+                setStatus($status, errorMessage, true);
                 return;
             }
 
