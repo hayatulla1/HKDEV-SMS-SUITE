@@ -143,9 +143,11 @@ class HKDEV_SMS_Pro
         register_setting('sib-pro-settings', 'hkdev_enable_status_sms', ['sanitize_callback' => [$this, 'sanitize_checkbox'], 'default' => 'yes']);
         register_setting('sib-pro-settings', 'hkdev_enable_logs', ['sanitize_callback' => [$this, 'sanitize_checkbox'], 'default' => 'yes']);
         register_setting('sib-pro-settings', 'hkdev_enable_order_blocker', ['sanitize_callback' => [$this, 'sanitize_checkbox'], 'default' => 'yes']);
+        register_setting('sib-pro-settings', 'hkdev_enable_failover', ['sanitize_callback' => [$this, 'sanitize_checkbox'], 'default' => 'yes']);
 
         register_setting('sib-pro-settings', 'hkdev_otp_expiry_minutes', ['sanitize_callback' => 'absint', 'default' => 10]);
         register_setting('sib-pro-settings', 'hkdev_otp_cooldown_seconds', ['sanitize_callback' => 'absint', 'default' => 60]);
+        register_setting('sib-pro-settings', 'hkdev_otp_length', ['sanitize_callback' => [$this, 'sanitize_otp_length'], 'default' => 6]);
 
         register_setting('sib-pro-settings', 'hkdev_balance_api_url', ['sanitize_callback' => 'esc_url_raw']);
         register_setting('sib-pro-settings', 'hkdev_balance_http_method', ['sanitize_callback' => [$this, 'sanitize_http_method']]);
@@ -161,6 +163,12 @@ class HKDEV_SMS_Pro
     public function sanitize_checkbox($value)
     {
         return $value === 'yes' ? 'yes' : 'no';
+    }
+
+    public function sanitize_otp_length($value)
+    {
+        $length = absint($value);
+        return in_array($length, [4, 5, 6, 8], true) ? $length : 6;
     }
 
     public function sanitize_target_products($value)
@@ -270,10 +278,15 @@ class HKDEV_SMS_Pro
         $p_msg    = get_option('sib_param_msg', 'message');
 
         $sender_ids = array_filter(array_map('trim', explode(',', $raw_senders)));
+        $is_failover_enabled = $this->is_feature_enabled('hkdev_enable_failover');
 
         if (empty($sender_ids)) {
             $this->log_sms($number, $message, 'Failed', 'No Sender ID configured');
             return ['status' => 'error', 'message' => 'No Sender ID configured'];
+        }
+
+        if (!$is_failover_enabled) {
+            $sender_ids = [reset($sender_ids)];
         }
 
         $last_error = 'Unknown gateway error';
@@ -336,6 +349,7 @@ class HKDEV_SMS_Pro
         $balance_time = $balance_time_raw ? date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($balance_time_raw)) : '';
 
         $notice = isset($_GET[$this->notice_param]) ? sanitize_text_field(wp_unslash($_GET[$this->notice_param])) : '';
+        $checkout_preview_url = function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : home_url('/');
         ?>
         <div class="wrap hkdev-wrap">
             <div class="hkdev-header">
@@ -352,11 +366,19 @@ class HKDEV_SMS_Pro
 
             <?php $this->render_admin_notice($notice); ?>
 
+            <div class="hkdev-view-switcher">
+                <a href="<?php echo esc_url(admin_url('admin.php?page=sib-pro&tab=overview')); ?>" class="button button-primary">
+                    <?php esc_html_e('1. View WP Admin Dashboard', 'universal-sms-pro-gateway'); ?>
+                </a>
+                <a href="<?php echo esc_url($checkout_preview_url); ?>" class="button button-secondary" target="_blank" rel="noopener noreferrer">
+                    <?php esc_html_e('2. View Checkout Modal', 'universal-sms-pro-gateway'); ?>
+                </a>
+            </div>
+
             <h2 class="nav-tab-wrapper hkdev-nav-tab-wrapper">
-                <a href="?page=sib-pro&tab=overview" class="nav-tab <?php echo $tab === 'overview' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('Overview', 'universal-sms-pro-gateway'); ?></a>
-                <a href="?page=sib-pro&tab=settings" class="nav-tab <?php echo $tab === 'settings' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('Gateway Settings', 'universal-sms-pro-gateway'); ?></a>
-                <a href="?page=sib-pro&tab=features" class="nav-tab <?php echo $tab === 'features' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('Feature Toggles', 'universal-sms-pro-gateway'); ?></a>
-                <a href="?page=sib-pro&tab=templates" class="nav-tab <?php echo $tab === 'templates' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('Templates & OTP', 'universal-sms-pro-gateway'); ?></a>
+                <a href="?page=sib-pro&tab=features" class="nav-tab <?php echo $tab === 'features' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('General Settings', 'universal-sms-pro-gateway'); ?></a>
+                <a href="?page=sib-pro&tab=settings" class="nav-tab <?php echo $tab === 'settings' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('API Credentials', 'universal-sms-pro-gateway'); ?></a>
+                <a href="?page=sib-pro&tab=templates" class="nav-tab <?php echo $tab === 'templates' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('SMS Templates', 'universal-sms-pro-gateway'); ?></a>
                 <a href="?page=sib-pro&tab=logs" class="nav-tab <?php echo $tab === 'logs' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('SMS Logs', 'universal-sms-pro-gateway'); ?></a>
             </h2>
 
@@ -462,7 +484,7 @@ class HKDEV_SMS_Pro
                     <form method="post" action="options.php">
                         <?php settings_fields('sib-pro-settings'); ?>
 
-                        <h3><?php esc_html_e('1. Provider Configuration', 'universal-sms-pro-gateway'); ?></h3>
+                        <h3><?php esc_html_e('Provider Configuration', 'universal-sms-pro-gateway'); ?></h3>
                         <table class="form-table">
                             <tr>
                                 <th><?php esc_html_e('API Endpoint URL', 'universal-sms-pro-gateway'); ?></th>
@@ -487,7 +509,7 @@ class HKDEV_SMS_Pro
                             </tr>
                         </table>
 
-                        <h3><?php esc_html_e('2. API Parameter Mapping', 'universal-sms-pro-gateway'); ?></h3>
+                        <h3><?php esc_html_e('API Parameter Mapping', 'universal-sms-pro-gateway'); ?></h3>
                         <table class="form-table">
                             <tr>
                                 <th><?php esc_html_e('Token Field Name', 'universal-sms-pro-gateway'); ?></th>
@@ -507,7 +529,7 @@ class HKDEV_SMS_Pro
                             </tr>
                         </table>
 
-                        <h3><?php esc_html_e('3. Balance API Settings', 'universal-sms-pro-gateway'); ?></h3>
+                        <h3><?php esc_html_e('Balance API Settings', 'universal-sms-pro-gateway'); ?></h3>
                         <table class="form-table">
                             <tr>
                                 <th><?php esc_html_e('Balance API URL', 'universal-sms-pro-gateway'); ?></th>
@@ -542,15 +564,33 @@ class HKDEV_SMS_Pro
                 <div class="hkdev-card">
                     <form method="post" action="options.php">
                         <?php settings_fields('sib-pro-settings'); ?>
+                        <div class="hkdev-section-header">
+                            <h3><?php esc_html_e('OTP Verification Options', 'universal-sms-pro-gateway'); ?></h3>
+                        </div>
                         <div class="hkdev-toggle-list">
+                            <?php $this->render_toggle('hkdev_enable_otp', __('Enable WooCommerce OTP', 'universal-sms-pro-gateway'), __('Require customers to verify their phone number during checkout.', 'universal-sms-pro-gateway')); ?>
+                            <div class="hkdev-toggle-row">
+                                <div class="hkdev-toggle-text">
+                                    <strong><?php esc_html_e('OTP Length', 'universal-sms-pro-gateway'); ?></strong>
+                                </div>
+                                <div class="hkdev-select-wrap">
+                                    <?php $otp_length = $this->sanitize_otp_length(get_option('hkdev_otp_length', 6)); ?>
+                                    <select name="hkdev_otp_length">
+                                        <option value="4" <?php selected($otp_length, 4); ?>><?php esc_html_e('4 Digits', 'universal-sms-pro-gateway'); ?></option>
+                                        <option value="5" <?php selected($otp_length, 5); ?>><?php esc_html_e('5 Digits', 'universal-sms-pro-gateway'); ?></option>
+                                        <option value="6" <?php selected($otp_length, 6); ?>><?php esc_html_e('6 Digits', 'universal-sms-pro-gateway'); ?></option>
+                                        <option value="8" <?php selected($otp_length, 8); ?>><?php esc_html_e('8 Digits', 'universal-sms-pro-gateway'); ?></option>
+                                    </select>
+                                </div>
+                            </div>
+                            <?php $this->render_toggle('hkdev_enable_failover', __('Enable SMS Failover', 'universal-sms-pro-gateway'), __('Automatically switch to fallback sender IDs if the primary fails.', 'universal-sms-pro-gateway')); ?>
                             <?php $this->render_toggle('hkdev_enable_gateway', __('Enable SMS Gateway', 'universal-sms-pro-gateway'), __('Turn off to pause all outgoing messages.', 'universal-sms-pro-gateway')); ?>
-                            <?php $this->render_toggle('hkdev_enable_otp', __('Enable OTP Verification', 'universal-sms-pro-gateway'), __('Require OTP on selected products at checkout.', 'universal-sms-pro-gateway')); ?>
+                            <?php $this->render_toggle('hkdev_enable_logs', __('Enable SMS Logs', 'universal-sms-pro-gateway'), __('Store the last 50 SMS attempts.', 'universal-sms-pro-gateway')); ?>
                             <?php $this->render_toggle('hkdev_enable_order_confirmation_sms', __('Enable Order Confirmation SMS', 'universal-sms-pro-gateway'), __('Send confirmation SMS after successful orders.', 'universal-sms-pro-gateway')); ?>
                             <?php $this->render_toggle('hkdev_enable_status_sms', __('Enable Status Update SMS', 'universal-sms-pro-gateway'), __('Notify customers when order status changes.', 'universal-sms-pro-gateway')); ?>
-                            <?php $this->render_toggle('hkdev_enable_logs', __('Enable SMS Logs', 'universal-sms-pro-gateway'), __('Store the last 50 SMS attempts.', 'universal-sms-pro-gateway')); ?>
                             <?php $this->render_toggle('hkdev_enable_order_blocker', __('Enable Order Delay Blocker', 'universal-sms-pro-gateway'), __('Protect against rapid duplicate orders.', 'universal-sms-pro-gateway')); ?>
                         </div>
-                        <?php submit_button(__('Save Feature Toggles', 'universal-sms-pro-gateway')); ?>
+                        <?php submit_button(__('Save Changes', 'universal-sms-pro-gateway')); ?>
                     </form>
                 </div>
             <?php elseif ($tab === 'templates') : ?>
@@ -819,13 +859,14 @@ class HKDEV_SMS_Pro
             ));
         }
 
+        $otp_length = $this->sanitize_otp_length(get_option('hkdev_otp_length', 6));
         try {
-            $otp = random_int(100000, 999999);
+            $otp = $this->create_numeric_otp($otp_length);
         } catch (Throwable $exception) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Universal SMS Pro OTP fallback used: ' . $exception->getMessage());
             }
-            $otp = $this->generate_fallback_otp();
+            $otp = $this->generate_fallback_otp($otp_length);
         }
 
         WC()->session->set('sib_otp', $otp);
@@ -969,13 +1010,14 @@ class HKDEV_SMS_Pro
         ) {
             return;
         }
+        $otp_length = $this->sanitize_otp_length(get_option('hkdev_otp_length', 6));
         ?>
         <div id="sib-otp-overlay" class="sib-otp-overlay" aria-hidden="true">
             <div class="sib-otp-modal" role="dialog" aria-modal="true" aria-labelledby="sib-otp-title" aria-describedby="sib-otp-subtitle">
                 <h3 id="sib-otp-title"><?php esc_html_e('Phone Verification', 'universal-sms-pro-gateway'); ?></h3>
                 <p id="sib-otp-subtitle" class="sib-otp-subtitle"><?php esc_html_e('Enter the OTP sent to your phone to complete checkout securely.', 'universal-sms-pro-gateway'); ?></p>
                 <label for="sib_otp_code" class="sib-otp-label"><?php esc_html_e('OTP Code', 'universal-sms-pro-gateway'); ?></label>
-                <input type="tel" id="sib_otp_code" maxlength="6" inputmode="numeric" autocomplete="one-time-code" aria-required="true" aria-describedby="sib-otp-subtitle" placeholder="<?php esc_attr_e('Enter OTP', 'universal-sms-pro-gateway'); ?>">
+                <input type="tel" id="sib_otp_code" maxlength="<?php echo esc_attr((string) $otp_length); ?>" inputmode="numeric" autocomplete="one-time-code" aria-required="true" aria-describedby="sib-otp-subtitle" placeholder="<?php esc_attr_e('Enter OTP', 'universal-sms-pro-gateway'); ?>">
                 <button type="button" id="sib_verify"><?php esc_html_e('Verify & Complete Order', 'universal-sms-pro-gateway'); ?></button>
                 <p id="sib_msg" class="sib-otp-message" role="alert"></p>
             </div>
@@ -983,18 +1025,30 @@ class HKDEV_SMS_Pro
         <?php
     }
 
-    private function generate_fallback_otp()
+    private function create_numeric_otp($length)
     {
+        $length = $this->sanitize_otp_length($length);
+        $min = (10 ** ($length - 1));
+        $max = (10 ** $length) - 1;
+        return random_int($min, $max);
+    }
+
+    private function generate_fallback_otp($length = 6)
+    {
+        $length = $this->sanitize_otp_length($length);
+        $min = (10 ** ($length - 1));
+        $max = (10 ** $length) - 1;
+
         if (function_exists('openssl_random_pseudo_bytes')) {
             $is_strong = false;
             $bytes = openssl_random_pseudo_bytes(4, $is_strong);
 
             if ($bytes !== false && $is_strong) {
                 $random_number = unpack('N', $bytes)[1];
-                return 100000 + ($random_number % 900000);
+                return $min + ($random_number % (($max - $min) + 1));
             }
         }
 
-        return wp_rand(100000, 999999);
+        return wp_rand($min, $max);
     }
 }
