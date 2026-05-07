@@ -3,6 +3,16 @@ jQuery(function ($) {
     const messages = config.messages || {};
     const ajaxUrl = config.ajaxUrl || '';
     const nonce = config.nonce || '';
+    const ERROR_COLOR = '#b91c1c';
+    const SUCCESS_COLOR = '#047857';
+
+    function getErrorMessage(response, messageFallback, defaultMessage) {
+        if (response && response.data) {
+            return response.data;
+        }
+
+        return messageFallback || defaultMessage;
+    }
 
     function setStatus($el, text, isError) {
         if (!$el || !$el.length) {
@@ -10,7 +20,7 @@ jQuery(function ($) {
         }
 
         $el.text(text || '');
-        $el.css('color', isError ? '#b91c1c' : '#047857');
+        $el.css('color', isError ? ERROR_COLOR : SUCCESS_COLOR);
     }
 
     $('#hkdev-refresh-balance').on('click', function () {
@@ -32,7 +42,7 @@ jQuery(function ($) {
             nonce: nonce,
         }).done(function (response) {
             if (!response || !response.success || !response.data) {
-                const errorMessage = response && response.data ? response.data : (messages.balanceError || 'Unable to fetch balance.');
+                const errorMessage = getErrorMessage(response, messages.balanceError, 'Unable to fetch balance.');
                 setStatus($status, errorMessage, true);
                 return;
             }
@@ -68,7 +78,7 @@ jQuery(function ($) {
             nonce: nonce,
         }).done(function (response) {
             if (!response || !response.success) {
-                const errorMessage = response && response.data ? response.data : (messages.testError || 'Failed to send test SMS.');
+                const errorMessage = getErrorMessage(response, messages.testError, 'Failed to send test SMS.');
                 setStatus($status, errorMessage, true);
                 return;
             }
