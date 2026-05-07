@@ -90,4 +90,18 @@ jQuery(function ($) {
             $button.prop('disabled', false);
         });
     });
+
+    $('.hkdev-card form').on('submit', function () {
+        const $submit = $(this).find('.button-primary[type="submit"]');
+        if (!$submit.length) {
+            return;
+        }
+
+        $submit.prop('disabled', true);
+        if ($submit.is('input')) {
+            $submit.val('Saving...');
+        } else {
+            $submit.text('Saving...');
+        }
+    });
 });

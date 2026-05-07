@@ -368,7 +368,7 @@ class HKDEV_SMS_Pro
 
             <div class="hkdev-view-switcher">
                 <a href="<?php echo esc_url(admin_url('admin.php?page=sib-pro&tab=overview')); ?>" class="button button-primary">
-                    <?php esc_html_e('1. View WP Admin Dashboard', 'universal-sms-pro-gateway'); ?>
+                    <?php esc_html_e('1. View Plugin Overview', 'universal-sms-pro-gateway'); ?>
                 </a>
                 <a href="<?php echo esc_url($checkout_preview_url); ?>" class="button button-secondary" target="_blank" rel="noopener noreferrer">
                     <?php esc_html_e('2. View Checkout Modal', 'universal-sms-pro-gateway'); ?>
@@ -585,10 +585,10 @@ class HKDEV_SMS_Pro
                             </div>
                             <?php $this->render_toggle('hkdev_enable_failover', __('Enable SMS Failover', 'universal-sms-pro-gateway'), __('Automatically switch to fallback sender IDs if the primary fails.', 'universal-sms-pro-gateway')); ?>
                             <?php $this->render_toggle('hkdev_enable_gateway', __('Enable SMS Gateway', 'universal-sms-pro-gateway'), __('Turn off to pause all outgoing messages.', 'universal-sms-pro-gateway')); ?>
-                            <?php $this->render_toggle('hkdev_enable_logs', __('Enable SMS Logs', 'universal-sms-pro-gateway'), __('Store the last 50 SMS attempts.', 'universal-sms-pro-gateway')); ?>
                             <?php $this->render_toggle('hkdev_enable_order_confirmation_sms', __('Enable Order Confirmation SMS', 'universal-sms-pro-gateway'), __('Send confirmation SMS after successful orders.', 'universal-sms-pro-gateway')); ?>
                             <?php $this->render_toggle('hkdev_enable_status_sms', __('Enable Status Update SMS', 'universal-sms-pro-gateway'), __('Notify customers when order status changes.', 'universal-sms-pro-gateway')); ?>
                             <?php $this->render_toggle('hkdev_enable_order_blocker', __('Enable Order Delay Blocker', 'universal-sms-pro-gateway'), __('Protect against rapid duplicate orders.', 'universal-sms-pro-gateway')); ?>
+                            <?php $this->render_toggle('hkdev_enable_logs', __('Enable SMS Logs', 'universal-sms-pro-gateway'), __('Store the last 50 SMS attempts.', 'universal-sms-pro-gateway')); ?>
                         </div>
                         <?php submit_button(__('Save Changes', 'universal-sms-pro-gateway')); ?>
                     </form>
@@ -1027,17 +1027,13 @@ class HKDEV_SMS_Pro
 
     private function create_numeric_otp($length)
     {
-        $length = $this->sanitize_otp_length($length);
-        $min = (10 ** ($length - 1));
-        $max = (10 ** $length) - 1;
+        [$min, $max] = $this->get_otp_bounds($length);
         return random_int($min, $max);
     }
 
     private function generate_fallback_otp($length = 6)
     {
-        $length = $this->sanitize_otp_length($length);
-        $min = (10 ** ($length - 1));
-        $max = (10 ** $length) - 1;
+        [$min, $max] = $this->get_otp_bounds($length);
 
         if (function_exists('openssl_random_pseudo_bytes')) {
             $is_strong = false;
@@ -1045,10 +1041,23 @@ class HKDEV_SMS_Pro
 
             if ($bytes !== false && $is_strong) {
                 $random_number = unpack('N', $bytes)[1];
-                return $min + ($random_number % (($max - $min) + 1));
+                return $min + ($random_number % ($max - $min + 1));
             }
         }
 
         return wp_rand($min, $max);
+    }
+
+    private function get_otp_bounds($length)
+    {
+        $otp_length = $this->sanitize_otp_length($length);
+        $range_map = [
+            4 => [1000, 9999],
+            5 => [10000, 99999],
+            6 => [100000, 999999],
+            8 => [10000000, 99999999],
+        ];
+
+        return $range_map[$otp_length];
     }
 }
