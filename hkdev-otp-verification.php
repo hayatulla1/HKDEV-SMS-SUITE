@@ -20,7 +20,11 @@ require_once USP_SMS_PLUGIN_DIR . 'includes/class-hkdev-order-delay-blocker.php'
 
 add_action('plugins_loaded', static function () {
     new HKDEV_SMS_Pro();
-    if (class_exists('WooCommerce') && get_option('hkdev_enable_order_blocker', 'yes') === 'yes') {
-        new HKDEV_Order_Delay_Blocker();
+    if (
+        class_exists('WooCommerce') &&
+        class_exists('USP_WC_Order_Delay_Blocker') &&
+        get_option('hkdev_enable_order_blocker', 'yes') === 'yes'
+    ) {
+        new USP_WC_Order_Delay_Blocker();
     }
 });
