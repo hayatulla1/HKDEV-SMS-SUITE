@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorBox = document.getElementById('hkdev-modal-error');
     const phoneInput = document.getElementById('hkdev-phone-input');
     const AUTO_CLOSE_DELAY_MS = 1500;
+    const verifyingText = window.hkdevFrontendAjax && hkdevFrontendAjax.verifyingText ? hkdevFrontendAjax.verifyingText : 'Verifying...';
+    const verifiedText = window.hkdevFrontendAjax && hkdevFrontendAjax.verifiedText ? hkdevFrontendAjax.verifiedText : 'Verified!';
 
     // Config from wp_localize_script
     const OTP_LENGTH = window.hkdevFrontendAjax ? parseInt(hkdevFrontendAjax.otpLength) : 6;
@@ -252,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         btnVerify.disabled = true;
-        btnText.textContent = 'Verifying...';
+        btnText.textContent = verifyingText;
 
         jQuery.post(hkdevFrontendAjax.ajaxUrl, {
             action: 'hkdev_verify_otp',
@@ -273,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 verifiedPhoneNumber = phone;
                 allowNextSubmission = true;
                 showSuccess('Phone verified successfully.');
-                btnText.textContent = 'Verified!';
+                btnText.textContent = verifiedText;
                 btnVerify.classList.remove('active');
                 btnVerify.classList.add('success');
 

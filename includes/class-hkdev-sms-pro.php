@@ -6,6 +6,7 @@ if (!defined('ABSPATH')) {
 
 class HKDEV_SMS_Pro {
     
+    // Bound checkout post_data size before parse_str to reduce abuse risk on checkout requests.
     private const MAX_CHECKOUT_POST_DATA_LENGTH = 20000;
 
     private $sms_gateway;
@@ -116,7 +117,9 @@ class HKDEV_SMS_Pro {
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('hkdev_otp_nonce'),
             'otpLength' => get_option('hkdev_otp_length', 6),
-            'cooldown' => get_option('hkdev_otp_cooldown_seconds', 60)
+            'cooldown' => get_option('hkdev_otp_cooldown_seconds', 60),
+            'verifyingText' => __('Verifying...', HKDEV_TEXT_DOMAIN),
+            'verifiedText' => __('Verified!', HKDEV_TEXT_DOMAIN)
         ));
     }
 

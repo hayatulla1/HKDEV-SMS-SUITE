@@ -13,7 +13,7 @@
         </div>
         <h3 class="modal-title"><?php _e('Phone Verification Required', HKDEV_TEXT_DOMAIN); ?></h3>
         <p class="modal-desc">
-            <?php _e('Verify your phone to complete order', HKDEV_TEXT_DOMAIN); ?>
+            <?php _e('Verify your phone to complete your order', HKDEV_TEXT_DOMAIN); ?>
         </p>
 
         <div class="modal-error-alert" id="hkdev-modal-error"></div>
