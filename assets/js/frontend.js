@@ -17,6 +17,16 @@ document.addEventListener('DOMContentLoaded', function() {
     let allowNextSubmission = false;
     let pendingCheckoutForm = null;
 
+    function closeModal() {
+        overlay.classList.remove('active');
+        clearInterval(timerInterval);
+        resetForm(false);
+        errorBox.style.display = 'none';
+        pendingCheckoutForm = null;
+        btnVerify.classList.remove('success');
+        btnText.innerHTML = 'Verify & Continue Order';
+    }
+
     // Generate OTP input boxes
     for (let i = 0; i < OTP_LENGTH; i++) {
         const input = document.createElement('input');
@@ -71,6 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         pendingCheckoutForm = formElement || pendingCheckoutForm;
         phoneInput.value = phone;
+        resetForm();
         overlay.classList.add('active');
         setTimeout(() => inputs[0].focus(), 100);
 
@@ -92,10 +103,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Close modal
     document.getElementById('hkdev-close-modal').addEventListener('click', function(e) {
         e.preventDefault();
-        overlay.classList.remove('active');
-        clearInterval(timerInterval);
-        resetForm();
-        pendingCheckoutForm = null;
+        closeModal();
+    });
+
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && overlay.classList.contains('active')) {
+            closeModal();
+        }
     });
 
     // Input handling
@@ -209,9 +229,11 @@ document.addEventListener('DOMContentLoaded', function() {
         errorBox.style.display = 'block';
     }
 
-    function resetForm() {
+    function resetForm(shouldFocus = true) {
         inputs.forEach(input => input.value = '');
-        inputs[0].focus();
+        if (shouldFocus) {
+            inputs[0].focus();
+        }
         errorBox.classList.remove('success');
         checkFormComplete();
     }

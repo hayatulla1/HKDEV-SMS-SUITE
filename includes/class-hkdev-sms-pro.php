@@ -308,7 +308,7 @@ class HKDEV_SMS_Pro {
 
         if (empty($phone) && isset($_POST['post_data'])) {
             $post_data = array();
-            $post_data_raw = sanitize_text_field(wp_unslash($_POST['post_data']));
+            $post_data_raw = wp_unslash($_POST['post_data']);
             parse_str($post_data_raw, $post_data);
             if (!empty($post_data['billing_phone'])) {
                 $phone = sanitize_text_field($post_data['billing_phone']);
