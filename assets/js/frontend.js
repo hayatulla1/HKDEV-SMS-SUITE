@@ -229,6 +229,15 @@ document.addEventListener('DOMContentLoaded', function() {
             phone: phone
         }, function(res) {
             if (res.success) {
+                const latestPhone = getBillingPhone(pendingCheckoutForm);
+                if (normalizePhone(latestPhone) !== normalizePhone(phone)) {
+                    showError('Phone number changed. Please verify again.');
+                    btnVerify.disabled = false;
+                    btnText.innerHTML = 'Verify & Complete Order';
+                    resetForm();
+                    return;
+                }
+
                 verifiedPhoneNumber = phone;
                 allowNextSubmission = true;
                 btnText.innerHTML = '<i class="ph-bold ph-check"></i> Verified!';
@@ -269,50 +278,52 @@ document.addEventListener('DOMContentLoaded', function() {
         return jQuery(formElement).find('input[name="billing_phone"]').length > 0;
     }
 
-    // Intercept checkout submit for WooCommerce and funnel checkout forms
-    jQuery(document).on('submit', 'form', function(e) {
-        if (!shouldInterceptCheckoutSubmit(this)) {
-            return;
-        }
-
-        if (overlay.classList.contains('active')) {
-            e.preventDefault();
+    function interceptCheckoutSubmission(formElement, event) {
+        if (!shouldInterceptCheckoutSubmit(formElement)) {
             return false;
         }
 
-        if (allowNextSubmission && isVerifiedPhoneMatch(getBillingPhone(this))) {
-            allowNextSubmission = false;
-            return;
+        const e = event || null;
+        if (overlay.classList.contains('active')) {
+            if (e) {
+                e.preventDefault();
+            }
+            return true;
         }
 
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        pendingCheckoutForm = this;
-        window.openHKDEVModal(this);
-        return false;
+        if (allowNextSubmission && isVerifiedPhoneMatch(getBillingPhone(formElement))) {
+            allowNextSubmission = false;
+            return false;
+        }
+
+        if (e) {
+            e.preventDefault();
+            if (typeof e.stopPropagation === 'function') {
+                e.stopPropagation();
+            }
+        }
+
+        pendingCheckoutForm = formElement;
+        window.openHKDEVModal(formElement);
+        return true;
+    }
+
+    // Intercept checkout submit for WooCommerce and funnel checkout forms
+    jQuery(document).on('submit', 'form', function(e) {
+        if (interceptCheckoutSubmission(this, e)) {
+            return false;
+        }
     });
 
     // Intercept common place-order buttons used by checkout/funnel builders
     jQuery(document).on('click', '#place_order, [name="woocommerce_checkout_place_order"], .wcf-submit-checkout, .wcf-next-btn', function(e) {
         const $form = jQuery(this).closest('form');
-        if (!$form.length || !shouldInterceptCheckoutSubmit($form[0])) {
+        if (!$form.length) {
             return;
         }
 
-        if (overlay.classList.contains('active')) {
-            e.preventDefault();
+        if (interceptCheckoutSubmission($form[0], e)) {
             return false;
         }
-
-        if (allowNextSubmission && isVerifiedPhoneMatch(getBillingPhone($form[0]))) {
-            allowNextSubmission = false;
-            return;
-        }
-
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        pendingCheckoutForm = $form[0];
-        window.openHKDEVModal($form[0]);
-        return false;
     });
 });
