@@ -104,7 +104,7 @@ The plugin provides a comprehensive admin interface with:
 
 ### Frontend Integration
 
-The OTP verification modal automatically appears on the WooCommerce checkout page when configured. Customers can:
+The OTP verification modal opens when the customer tries to place the order on checkout/funnel pages. Customers can:
 
 1. Enter their phone number
 2. Receive an OTP via SMS
