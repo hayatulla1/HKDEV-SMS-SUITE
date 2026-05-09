@@ -38,7 +38,7 @@ class HKDEV_SMS_Gateway {
             );
         }
 
-        if (get_option('hkdev_enable_gateway', 'yes') !== 'yes') {
+        if (!hkdev_option_is_enabled('hkdev_enable_gateway', 'yes')) {
             return array(
                 'success' => false,
                 'message' => __('SMS Gateway is disabled', HKDEV_TEXT_DOMAIN)
@@ -65,12 +65,13 @@ class HKDEV_SMS_Gateway {
 
     private function send_get_request($data) {
         $url = add_query_arg($data, $this->gateway_url);
+        $sslverify = apply_filters('hkdev_sms_sslverify', true);
 
         $response = wp_remote_get(
             $url,
             array(
                 'timeout' => 10,
-                'sslverify' => false,
+                'sslverify' => $sslverify,
                 'user-agent' => 'HKDEV-SMS-Suite/' . HKDEV_PLUGIN_VERSION
             )
         );
@@ -79,12 +80,14 @@ class HKDEV_SMS_Gateway {
     }
 
     private function send_post_request($data) {
+        $sslverify = apply_filters('hkdev_sms_sslverify', true);
+
         $response = wp_remote_post(
             $this->gateway_url,
             array(
                 'method' => 'POST',
                 'timeout' => 10,
-                'sslverify' => false,
+                'sslverify' => $sslverify,
                 'user-agent' => 'HKDEV-SMS-Suite/' . HKDEV_PLUGIN_VERSION,
                 'body' => $data
             )
@@ -152,7 +155,7 @@ class HKDEV_SMS_Gateway {
             $balance_api_url,
             array(
                 'timeout' => 10,
-                'sslverify' => false,
+                'sslverify' => apply_filters('hkdev_sms_sslverify', true),
                 'headers' => array(
                     'Authorization' => 'Bearer ' . $this->api_token
                 )
@@ -188,7 +191,7 @@ class HKDEV_SMS_Gateway {
     }
 
     private function log_sms($log_data) {
-        if (get_option('hkdev_enable_logs', 'yes') !== 'yes') {
+        if (!hkdev_option_is_enabled('hkdev_enable_logs', 'yes')) {
             return;
         }
 

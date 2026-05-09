@@ -142,7 +142,7 @@ class HKDEV_SMS_Pro {
     }
 
     private function is_otp_needed() {
-        if (get_option('hkdev_enable_otp', 'on') !== 'on') {
+        if (!hkdev_option_is_enabled('hkdev_enable_otp', 'yes')) {
             return false;
         }
 
@@ -295,7 +295,7 @@ class HKDEV_SMS_Pro {
 
     // WooCommerce: Send Order Confirmation SMS
     public function send_order_confirmation_sms($order_id) {
-        if (get_option('hkdev_enable_order_confirmation_sms', 'yes') !== 'yes') {
+        if (!hkdev_option_is_enabled('hkdev_enable_order_confirmation_sms', 'yes')) {
             return;
         }
 
@@ -321,7 +321,7 @@ class HKDEV_SMS_Pro {
 
     // WooCommerce: Send Status Update SMS
     public function send_status_update_sms($order_id, $old_status, $new_status, $order) {
-        if (get_option('hkdev_enable_status_sms', 'yes') !== 'yes') {
+        if (!hkdev_option_is_enabled('hkdev_enable_status_sms', 'yes')) {
             return;
         }
 

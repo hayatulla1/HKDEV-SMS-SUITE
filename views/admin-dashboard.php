@@ -93,7 +93,7 @@
                                     <p><?php _e('Require customers to verify their phone number at checkout.', HKDEV_TEXT_DOMAIN); ?></p>
                                 </div>
                                 <label class="switch switch-dark">
-                                    <input type="checkbox" name="hkdev_enable_otp" value="on" <?php checked(get_option('hkdev_enable_otp', 'on'), 'on'); ?>>
+                                    <input type="checkbox" name="hkdev_enable_otp" value="yes" <?php checked(hkdev_option_is_enabled('hkdev_enable_otp', 'yes'), true); ?>>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -103,7 +103,7 @@
                                     <p><?php _e('Master toggle — turn off to pause all outgoing messages instantly.', HKDEV_TEXT_DOMAIN); ?></p>
                                 </div>
                                 <label class="switch switch-dark">
-                                    <input type="checkbox" name="hkdev_enable_gateway" value="on" <?php checked(get_option('hkdev_enable_gateway', 'on'), 'on'); ?>>
+                                    <input type="checkbox" name="hkdev_enable_gateway" value="yes" <?php checked(hkdev_option_is_enabled('hkdev_enable_gateway', 'yes'), true); ?>>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -113,7 +113,7 @@
                                     <p><?php _e('Send SMS to customers after successful order placement.', HKDEV_TEXT_DOMAIN); ?></p>
                                 </div>
                                 <label class="switch switch-dark">
-                                    <input type="checkbox" name="hkdev_enable_order_confirmation_sms" value="on" <?php checked(get_option('hkdev_enable_order_confirmation_sms', 'on'), 'on'); ?>>
+                                    <input type="checkbox" name="hkdev_enable_order_confirmation_sms" value="yes" <?php checked(hkdev_option_is_enabled('hkdev_enable_order_confirmation_sms', 'yes'), true); ?>>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -123,7 +123,7 @@
                                     <p><?php _e('Notify customers when their order status changes.', HKDEV_TEXT_DOMAIN); ?></p>
                                 </div>
                                 <label class="switch switch-dark">
-                                    <input type="checkbox" name="hkdev_enable_status_sms" value="on" <?php checked(get_option('hkdev_enable_status_sms', 'on'), 'on'); ?>>
+                                    <input type="checkbox" name="hkdev_enable_status_sms" value="yes" <?php checked(hkdev_option_is_enabled('hkdev_enable_status_sms', 'yes'), true); ?>>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -133,7 +133,7 @@
                                     <p><?php _e('Keep detailed logs of all SMS transactions for audit purposes.', HKDEV_TEXT_DOMAIN); ?></p>
                                 </div>
                                 <label class="switch switch-dark">
-                                    <input type="checkbox" name="hkdev_enable_logs" value="on" <?php checked(get_option('hkdev_enable_logs', 'on'), 'on'); ?>>
+                                    <input type="checkbox" name="hkdev_enable_logs" value="yes" <?php checked(hkdev_option_is_enabled('hkdev_enable_logs', 'yes'), true); ?>>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -405,6 +405,14 @@
 
     .logs-table thead {
         background: #f8fafc;
+    }
+
+    .logs-table tbody tr:nth-child(even) {
+        background: #f8fafc;
+    }
+
+    .logs-table tbody tr:hover {
+        background: #eef2ff;
     }
 
     .logs-table th {

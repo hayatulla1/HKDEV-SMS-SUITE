@@ -46,11 +46,25 @@ class HKDEV_WC_Order_Delay_Blocker {
     }
 
     public function validate_bd_phone() {
-        $billing_phone = isset($_POST['post_data']) ? sanitize_text_field($_POST['post_data']) : '';
+        $billing_phone = '';
+
+        if (isset($_POST['billing_phone'])) {
+            $billing_phone = sanitize_text_field(wp_unslash($_POST['billing_phone']));
+        }
+
+        if (empty($billing_phone) && isset($_POST['post_data'])) {
+            $post_data = array();
+            parse_str(wp_unslash($_POST['post_data']), $post_data);
+            if (!empty($post_data['billing_phone'])) {
+                $billing_phone = sanitize_text_field($post_data['billing_phone']);
+            }
+        }
 
         if (empty($billing_phone)) {
             return;
         }
+
+        $billing_phone = preg_replace('/[^0-9+]/', '', $billing_phone);
 
         // Validate phone is in correct format
         if (!preg_match('/^(?:\+88|88)?01[0-9]{9}$/', $billing_phone)) {
@@ -94,14 +108,14 @@ class HKDEV_WC_Order_Delay_Blocker {
         // Calculate block duration in seconds
         $duration_seconds = $this->calculate_block_duration();
 
-        // Set transient for phone
+        $combined_block = get_option(self::OPTION_COMBINED_BLOCK, 'off') === 'on';
+
         if (!empty($billing_phone)) {
             $phone_key = $this->block_transient_prefix . 'phone_' . md5($billing_phone);
             set_transient($phone_key, true, $duration_seconds);
         }
 
-        // Set transient for IP
-        if (!empty($customer_ip)) {
+        if (!empty($customer_ip) && ($combined_block || empty($billing_phone))) {
             $ip_key = $this->block_transient_prefix . 'ip_' . md5($customer_ip);
             set_transient($ip_key, true, $duration_seconds);
         }
@@ -121,13 +135,25 @@ class HKDEV_WC_Order_Delay_Blocker {
     }
 
     private function get_customer_ip() {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            return sanitize_text_field($_SERVER['HTTP_CLIENT_IP']);
-        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            return sanitize_text_field($_SERVER['HTTP_X_FORWARDED_FOR']);
-        } elseif (!empty($_SERVER['REMOTE_ADDR'])) {
-            return sanitize_text_field($_SERVER['REMOTE_ADDR']);
+        $candidates = array('HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR');
+
+        foreach ($candidates as $candidate) {
+            if (empty($_SERVER[$candidate])) {
+                continue;
+            }
+
+            $ip = wp_unslash($_SERVER[$candidate]);
+            if ($candidate === 'HTTP_X_FORWARDED_FOR') {
+                $parts = explode(',', $ip);
+                $ip = trim($parts[0]);
+            }
+
+            $ip = sanitize_text_field($ip);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
         }
+
         return '';
     }
 
