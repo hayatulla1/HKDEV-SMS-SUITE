@@ -154,7 +154,7 @@ class HKDEV_SMS_Pro {
             return false;
         }
 
-        $targets = array_unique(array_filter(array_map('absint', array_map('trim', explode(',', get_option('sib_target_products', ''))))));
+        $targets = array_unique(array_filter(array_map('absint', explode(',', get_option('sib_target_products', '')))));
         if (empty($targets)) {
             return false;
         }
@@ -163,7 +163,10 @@ class HKDEV_SMS_Pro {
             $product_id = isset($item['product_id']) ? absint($item['product_id']) : 0;
             $variation_id = isset($item['variation_id']) ? absint($item['variation_id']) : 0;
 
-            if (in_array($product_id, $targets, true) || in_array($variation_id, $targets, true)) {
+            if (
+                ($product_id > 0 && in_array($product_id, $targets, true)) ||
+                ($variation_id > 0 && in_array($variation_id, $targets, true))
+            ) {
                 return true;
             }
         }
