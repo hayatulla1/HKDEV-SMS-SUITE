@@ -1,107 +1,128 @@
-jQuery(function ($) {
-    const config = window.hkdevAdminData || {};
-    const messages = config.messages || {};
-    const ajaxUrl = config.ajaxUrl || '';
-    const nonce = config.nonce || '';
-    const ERROR_COLOR = '#b91c1c';
-    const SUCCESS_COLOR = '#047857';
+document.addEventListener('DOMContentLoaded', function() {
 
-    function getErrorMessage(response, messageFallback, defaultMessage) {
-        if (response && response.success === false && typeof response.data === 'string' && response.data !== '') {
-            return response.data;
+    // --- Navigation ---
+    window.switchAppView = function(viewId) {
+        document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.sidebar-nav li').forEach(el => el.classList.remove('active'));
+
+        const viewEl = document.getElementById(`app-view-${viewId}`);
+        const navEl = document.getElementById(`nav-${viewId}`);
+
+        if (viewEl) viewEl.classList.add('active');
+        if (navEl) navEl.classList.add('active');
+    };
+
+    window.switchTab = function(evt, group, tabId) {
+        evt.preventDefault();
+        const viewContainer = document.getElementById(`app-view-${group}`);
+
+        if (!viewContainer) return;
+
+        viewContainer.querySelectorAll('.pill-tab').forEach(tab => tab.classList.remove('active'));
+        viewContainer.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        evt.currentTarget.classList.add('active');
+        const tabEl = document.getElementById(`${group}-tab-${tabId}`);
+        if (tabEl) {
+            tabEl.classList.add('active');
         }
+    };
 
-        return messageFallback || defaultMessage;
-    }
+    // --- Refresh Balance ---
+    const btnRefresh = document.getElementById('btn-refresh-balance');
+    if (btnRefresh) {
+        btnRefresh.addEventListener('click', function(e) {
+            e.preventDefault();
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="ph-bold ph-spinner-gap" style="animation: spin 1s linear infinite;"></i> Refreshing...';
+            this.disabled = true;
 
-    function setStatus($el, text, isError) {
-        if (!$el || !$el.length) {
-            return;
-        }
-
-        $el.text(text || '');
-        $el.css('color', isError ? ERROR_COLOR : SUCCESS_COLOR);
-    }
-
-    $('#hkdev-refresh-balance').on('click', function () {
-        const $button = $(this);
-        const $status = $('#hkdev-balance-status');
-        const $value = $('#hkdev-balance-value');
-        const $time = $('#hkdev-balance-time');
-
-        if (!ajaxUrl || !nonce) {
-            setStatus($status, messages.balanceError || 'Unable to fetch balance.', true);
-            return;
-        }
-
-        $button.prop('disabled', true);
-        setStatus($status, messages.balanceLoading || 'Checking balance...', false);
-
-        $.post(ajaxUrl, {
-            action: 'hkdev_check_balance',
-            nonce: nonce,
-        }).done(function (response) {
-            if (!response || response.success !== true || response.data == null) {
-                const errorMessage = getErrorMessage(response, messages.balanceError, 'Unable to fetch balance.');
-                setStatus($status, errorMessage, true);
-                return;
-            }
-
-            $value.text(response.data.amount || '');
-            if (response.data.checked_at) {
-                $time.text(response.data.checked_at);
-            }
-            setStatus($status, messages.balanceSuccess || 'Balance updated.', false);
-        }).fail(function () {
-            setStatus($status, messages.balanceError || 'Unable to fetch balance.', true);
-        }).always(function () {
-            $button.prop('disabled', false);
+            jQuery.post(hkdevAjax.ajaxUrl, {
+                action: 'hkdev_check_balance',
+                nonce: hkdevAjax.nonce
+            }, function(response) {
+                if (response.success) {
+                    alert('Balance Updated: ' + response.data.amount);
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.data);
+                    btnRefresh.innerHTML = originalText;
+                    btnRefresh.disabled = false;
+                }
+            });
         });
-    });
+    }
 
-    $('#hkdev-test-sms').on('click', function () {
-        const $button = $(this);
-        const $status = $('#hkdev-test-status');
-        const $phone = $('#hkdev-test-phone');
+    // --- Test SMS ---
+    window.testSMS = function() {
+        const phone = prompt('Enter phone number to test:');
+        if (!phone) return;
 
-        if (!ajaxUrl || !nonce) {
-            setStatus($status, messages.testError || 'Unable to process request.', true);
-            return;
-        }
+        const message = prompt('Enter test message:', 'Test SMS from HKDEV SMS Suite');
+        if (!message) return;
 
-        $button.prop('disabled', true);
-        setStatus($status, messages.testSending || 'Sending test SMS...', false);
+        const btnTest = document.getElementById('btn-test-sms');
+        const originalText = btnTest.innerHTML;
+        btnTest.innerHTML = '<i class="ph-bold ph-spinner-gap" style="animation: spin 1s linear infinite;"></i> Sending...';
+        btnTest.disabled = true;
 
-        $.post(ajaxUrl, {
+        jQuery.post(hkdevAjax.ajaxUrl, {
             action: 'hkdev_test_sms',
-            phone: $phone.val(),
-            nonce: nonce,
-        }).done(function (response) {
-            if (!response || response.success !== true) {
-                const errorMessage = getErrorMessage(response, messages.testError, 'Failed to send test SMS.');
-                setStatus($status, errorMessage, true);
-                return;
+            nonce: hkdevAjax.nonce,
+            phone: phone,
+            message: message
+        }, function(response) {
+            if (response.success) {
+                alert('Success: ' + response.data);
+            } else {
+                alert('Error: ' + response.data);
             }
-
-            setStatus($status, response.data || messages.testSent || 'Test SMS sent.', false);
-        }).fail(function () {
-            setStatus($status, messages.testError || 'Failed to send test SMS.', true);
-        }).always(function () {
-            $button.prop('disabled', false);
+            btnTest.innerHTML = originalText;
+            btnTest.disabled = false;
         });
-    });
+    };
 
-    $('.hkdev-card form').on('submit', function () {
-        const $submit = $(this).find('.button-primary[type="submit"]');
-        if (!$submit.length) {
+    // --- Clear Logs ---
+    window.clearLogs = function() {
+        if (!confirm('Are you sure you want to clear all SMS logs? This action cannot be undone.')) {
             return;
         }
 
-        $submit.prop('disabled', true);
-        if ($submit.is('input')) {
-            $submit.val('Saving...');
-        } else {
-            $submit.text('Saving...');
+        const btnClear = document.getElementById('btn-clear-logs');
+        const originalText = btnClear.innerHTML;
+        btnClear.innerHTML = '<i class="ph-bold ph-spinner-gap" style="animation: spin 1s linear infinite;"></i> Clearing...';
+        btnClear.disabled = true;
+
+        jQuery.post(hkdevAjax.ajaxUrl, {
+            action: 'hkdev_clear_logs',
+            nonce: hkdevAjax.nonce
+        }, function(response) {
+            if (response.success) {
+                alert('Success: ' + response.data);
+                location.reload();
+            } else {
+                alert('Error: ' + response.data);
+                btnClear.innerHTML = originalText;
+                btnClear.disabled = false;
+            }
+        });
+    };
+
+    // --- Form Submission ---
+    const form = document.getElementById('hkdev-settings-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Allow default form submission (handled by WordPress)
+        });
+    }
+
+    // Add spin animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
-    });
+    `;
+    document.head.appendChild(style);
 });

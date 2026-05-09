@@ -1,0 +1,74 @@
+<?php
+/**
+ * Plugin Name: HKDEV SMS Suite
+ * Description: Professional SMS, OTP, Order Blocker & Abandoned Cart toolkit for WooCommerce
+ * Version: 2.0.0
+ * Author: HKDEV
+ * Author URI: https://hkdev.com
+ * License: GPL v3
+ * Text Domain: hkdev-sms-suite
+ * Domain Path: /languages
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+// Define Plugin Constants
+define('HKDEV_PLUGIN_FILE', __FILE__);
+define('HKDEV_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('HKDEV_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('HKDEV_PLUGIN_VERSION', '2.0.0');
+define('HKDEV_TEXT_DOMAIN', 'hkdev-sms-suite');
+
+// Plugin Activation & Deactivation Hooks
+register_activation_hook(__FILE__, 'hkdev_plugin_activate');
+register_deactivation_hook(__FILE__, 'hkdev_plugin_deactivate');
+
+function hkdev_plugin_activate() {
+    if (!get_option('hkdev_plugin_activated')) {
+        update_option('hkdev_plugin_activated', true);
+        update_option('hkdev_enable_gateway', 'yes');
+        update_option('hkdev_enable_otp', 'yes');
+        update_option('hkdev_enable_logs', 'yes');
+        update_option('hkdev_otp_length', 6);
+        update_option('hkdev_otp_expiry_minutes', 10);
+        update_option('hkdev_otp_cooldown_seconds', 60);
+        update_option('sib_sms_logs', array());
+    }
+}
+
+function hkdev_plugin_deactivate() {
+    // Cleanup code
+}
+
+// Require core classes
+require_once HKDEV_PLUGIN_DIR . 'includes/class-hkdev-sms-gateway.php';
+require_once HKDEV_PLUGIN_DIR . 'includes/class-hkdev-otp-handler.php';
+require_once HKDEV_PLUGIN_DIR . 'includes/class-hkdev-sms-pro.php';
+require_once HKDEV_PLUGIN_DIR . 'includes/class-hkdev-order-delay-blocker.php';
+
+// Plugin Initialization
+add_action('plugins_loaded', 'hkdev_initialize_plugin', 10);
+
+function hkdev_initialize_plugin() {
+    if (!function_exists('is_plugin_active') || !is_plugin_active('woocommerce/woocommerce.php')) {
+        add_action('admin_notices', function() {
+            echo '<div class="notice notice-error"><p>';
+            echo __('HKDEV SMS Suite requires WooCommerce to be installed and active.', HKDEV_TEXT_DOMAIN);
+            echo '</p></div>';
+        });
+        return;
+    }
+
+    new HKDEV_SMS_Pro();
+    
+    if (get_option('hkdev_enable_order_blocker', 'yes') === 'yes') {
+        new HKDEV_WC_Order_Delay_Blocker();
+    }
+}
+
+// Load text domain for translations
+add_action('init', function() {
+    load_plugin_textdomain(HKDEV_TEXT_DOMAIN, false, dirname(plugin_basename(__FILE__)) . '/languages');
+});

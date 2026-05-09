@@ -1,166 +1,232 @@
-jQuery(function ($) {
-    const config = window.uspSmsData || {};
-    const messages = config.messages || {};
-    let isVerified = Boolean(config.isVerified);
-    let timerId = null;
-    let secondsRemaining = 0;
-    const $verifyButton = $('#sib_verify');
-    const defaultVerifyText = $verifyButton.text();
-    const $timer = $('#sib_otp_timer');
+document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('hkdev-otp-modal');
+    if (!overlay) return;
 
-    function clearTimer() {
-        if (timerId) {
-            window.clearInterval(timerId);
-            timerId = null;
-        }
+    const form = document.getElementById('hkdev-otp-form');
+    const inputContainer = document.getElementById('hkdev-otp-inputs');
+    const btnVerify = document.getElementById('hkdev-btn-verify');
+    const btnText = document.getElementById('hkdev-btn-verify-text');
+    const errorBox = document.getElementById('hkdev-modal-error');
+    const phoneInput = document.getElementById('hkdev-phone-input');
+
+    // Config from wp_localize_script
+    const OTP_LENGTH = window.hkdevFrontendAjax ? parseInt(hkdevFrontendAjax.otpLength) : 6;
+    const COOLDOWN = window.hkdevFrontendAjax ? parseInt(hkdevFrontendAjax.cooldown) : 60;
+    let timerInterval;
+
+    // Generate OTP input boxes
+    for (let i = 0; i < OTP_LENGTH; i++) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.inputMode = 'numeric';
+        input.maxLength = 1;
+        input.className = 'otp-input-box';
+        input.required = true;
+        input.dataset.index = i;
+        inputContainer.appendChild(input);
     }
 
-    function formatTime(totalSeconds) {
-        const safeSeconds = Math.max(0, parseInt(totalSeconds, 10) || 0);
-        const minutes = Math.floor(safeSeconds / 60);
-        const seconds = safeSeconds % 60;
-        return minutes + ':' + String(seconds).padStart(2, '0');
-    }
+    const inputs = document.querySelectorAll('.otp-input-box');
 
-    function renderTimer() {
-        if (!$timer.length) {
+    // Make modal opener globally available
+    window.openHKDEVModal = function() {
+        const phone = jQuery('#billing_phone').val();
+        if (!phone) {
+            alert('Please enter your phone number first.');
             return;
         }
 
-        if (secondsRemaining <= 0) {
-            $timer.text(messages.otpExpired || 'OTP expired. Please request a new one.');
-            return;
-        }
+        phoneInput.value = phone;
+        overlay.classList.add('active');
+        setTimeout(() => inputs[0].focus(), 100);
 
-        const template = messages.otpExpiresIn || 'Code expires in %s';
-        $timer.text(template.replace('%s', formatTime(secondsRemaining)));
+        // Send OTP
+        jQuery.post(hkdevFrontendAjax.ajaxUrl, {
+            action: 'hkdev_send_otp',
+            nonce: hkdevFrontendAjax.nonce,
+            phone: phone
+        }, function(res) {
+            if (res.success) {
+                startTimer(COOLDOWN);
+                errorBox.style.display = 'none';
+            } else {
+                showError(res.data || 'Failed to send OTP');
+            }
+        });
+    };
+
+    // Close modal
+    document.getElementById('hkdev-close-modal').addEventListener('click', function(e) {
+        e.preventDefault();
+        overlay.classList.remove('active');
+        clearInterval(timerInterval);
+        resetForm();
+    });
+
+    // Input handling
+    inputs.forEach((input, index) => {
+        input.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            errorBox.style.display = 'none';
+
+            if (this.value !== '' && index < inputs.length - 1) {
+                inputs[index + 1].focus();
+            }
+
+            checkFormComplete();
+        });
+
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && this.value === '' && index > 0) {
+                inputs[index - 1].focus();
+            }
+        });
+
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, OTP_LENGTH);
+            if (!pastedData) return;
+
+            let focusIndex = index;
+            for (let i = 0; i < pastedData.length; i++) {
+                if (index + i < inputs.length) {
+                    inputs[index + i].value = pastedData[i];
+                    focusIndex = index + i;
+                }
+            }
+
+            if (focusIndex < inputs.length - 1) {
+                inputs[focusIndex + 1].focus();
+            } else {
+                inputs[focusIndex].blur();
+            }
+
+            checkFormComplete();
+        });
+    });
+
+    function checkFormComplete() {
+        const isComplete = Array.from(inputs).every(input => input.value.length === 1);
+
+        if (isComplete) {
+            btnVerify.disabled = false;
+            btnVerify.classList.add('active');
+        } else {
+            btnVerify.disabled = true;
+            btnVerify.classList.remove('active');
+        }
     }
 
     function startTimer(seconds) {
-        clearTimer();
-        secondsRemaining = parseInt(seconds, 10) || 0;
-        renderTimer();
+        clearInterval(timerInterval);
+        const timerDisplay = document.getElementById('hkdev-countdown');
+        const timerWrapper = document.getElementById('hkdev-timer-wrapper');
+        const resendBtn = document.getElementById('hkdev-btn-resend');
 
-        if (secondsRemaining <= 0) {
-            return;
-        }
+        timerWrapper.style.display = 'block';
+        resendBtn.style.display = 'none';
 
-        timerId = window.setInterval(function () {
-            secondsRemaining -= 1;
-            renderTimer();
+        let timeLeft = seconds;
+        timerDisplay.textContent = `00:${timeLeft.toString().padStart(2, '0')}`;
 
-            if (secondsRemaining <= 0) {
-                clearTimer();
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timerDisplay.textContent = `00:${timeLeft.toString().padStart(2, '0')}`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timerWrapper.style.display = 'none';
+                resendBtn.style.display = 'block';
             }
         }, 1000);
     }
 
-    function clearTimerDisplay() {
-        $timer.text('');
-    }
-
-    function setMessage(message, type) {
-        const $message = $('#sib_msg');
-        $message.removeClass('is-error is-success is-info');
-
-        if (!message) {
-            $message.text('');
-            return;
-        }
-
-        $message.text(message);
-        if (type === 'success') {
-            $message.addClass('is-success');
-            return;
-        }
-        if (type === 'info') {
-            $message.addClass('is-info');
-            return;
-        }
-
-        $message.addClass('is-error');
-    }
-
-    function setVerifyButtonState(isBusy, text) {
-        $verifyButton
-            .prop('disabled', isBusy)
-            .attr('aria-busy', isBusy ? 'true' : 'false')
-            .text(text);
-    }
-
-    $('form.checkout').on('submit', function (e) {
-        if (isVerified) {
-            return;
-        }
-
+    document.getElementById('hkdev-btn-resend').addEventListener('click', function(e) {
         e.preventDefault();
-        $('#sib-otp-overlay').css('display', 'flex').attr('aria-hidden', 'false');
-        setMessage('');
-        setVerifyButtonState(true, defaultVerifyText);
+        resetForm();
 
-        const phone = $('#billing_phone').val();
-        const normalizedPhone = String(phone || '').replace(/\D+/g, '');
+        const phone = phoneInput.value;
+        if (!phone) return;
 
-        if (!normalizedPhone) {
-            setMessage(messages.phoneRequired, 'error');
-            setVerifyButtonState(false, defaultVerifyText);
-            return;
-        }
-
-        setMessage(messages.sendingOtp, 'info');
-        clearTimerDisplay();
-
-        $.post(config.ajaxUrl, {
-            action: 'sib_send_otp',
-            phone,
-            nonce: config.nonce,
-        }, function (response) {
-            if (response.success) {
-                setMessage(messages.otpSent, 'success');
-                startTimer(config.expirySeconds);
-                return;
+        jQuery.post(hkdevFrontendAjax.ajaxUrl, {
+            action: 'hkdev_send_otp',
+            nonce: hkdevFrontendAjax.nonce,
+            phone: phone
+        }, function(res) {
+            if (res.success) {
+                startTimer(COOLDOWN);
+                errorBox.style.display = 'none';
+            } else {
+                showError(res.data || 'Failed to resend OTP');
             }
-
-            setMessage(response.data || messages.sendFailed, 'error');
-        }).fail(function () {
-            setMessage(messages.sendFailed, 'error');
-        }).always(function () {
-            setVerifyButtonState(false, defaultVerifyText);
         });
     });
 
-    $('#sib_verify').on('click', function () {
-        const otp = $('#sib_otp_code').val();
-        const normalizedOtp = String(otp || '').replace(/\D+/g, '');
+    function showError(msg) {
+        errorBox.textContent = msg;
+        errorBox.style.display = 'block';
+    }
 
-        if (!normalizedOtp) {
-            setMessage(messages.invalidOtp, 'error');
+    function resetForm() {
+        inputs.forEach(input => input.value = '');
+        inputs[0].focus();
+        checkFormComplete();
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const otpCode = Array.from(inputs).map(i => i.value).join('');
+        const phone = phoneInput.value;
+
+        if (!otpCode || !phone) {
+            showError('Please enter OTP and phone number');
             return;
         }
 
-        setVerifyButtonState(true, messages.verifyingOtp || defaultVerifyText);
+        btnVerify.disabled = true;
+        btnText.innerHTML = 'Verifying...';
 
-        $.post(config.ajaxUrl, {
-            action: 'sib_verify_otp',
-            otp: normalizedOtp,
-            nonce: config.nonce,
-        }, function (response) {
-            if (response.success) {
-                isVerified = true;
-                clearTimer();
-                clearTimerDisplay();
-                $('#sib-otp-overlay').hide().attr('aria-hidden', 'true');
-                $('form.checkout').trigger('submit');
-                return;
-            }
+        jQuery.post(hkdevFrontendAjax.ajaxUrl, {
+            action: 'hkdev_verify_otp',
+            nonce: hkdevFrontendAjax.nonce,
+            otp: otpCode,
+            phone: phone
+        }, function(res) {
+            if (res.success) {
+                btnText.innerHTML = '<i class="ph-bold ph-check"></i> Verified!';
+                btnVerify.classList.remove('active');
+                btnVerify.classList.add('success');
 
-            setMessage(response.data || messages.invalidOtp, 'error');
-        }).fail(function () {
-            setMessage(messages.invalidOtp, 'error');
-        }).always(function () {
-            if (!isVerified) {
-                setVerifyButtonState(false, defaultVerifyText);
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                    // Submit the WooCommerce checkout form
+                    jQuery('form.checkout').submit();
+                }, 1000);
+            } else {
+                showError(res.data || 'Invalid OTP. Please try again.');
+                btnVerify.disabled = false;
+                btnText.innerHTML = 'Verify & Complete Order';
+                resetForm();
             }
         });
+    });
+
+    // Auto-open modal when billing phone is filled
+    const billingPhoneField = jQuery('#billing_phone');
+    if (billingPhoneField.length) {
+        billingPhoneField.on('change', function() {
+            if (jQuery(this).val() && !overlay.classList.contains('active')) {
+                window.openHKDEVModal();
+            }
+        });
+    }
+
+    // Prevent form submission if OTP not verified
+    jQuery('form.checkout').on('submit', function(e) {
+        if (hkdevFrontendAjax && overlay.classList.contains('active')) {
+            e.preventDefault();
+            return false;
+        }
     });
 });
