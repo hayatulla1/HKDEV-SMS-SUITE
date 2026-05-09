@@ -5,7 +5,7 @@ if (!defined('ABSPATH')) {
 }
 
 class HKDEV_SMS_Gateway {
-    private const BALANCE_FALLBACK_KEYS = array('balance', 'Balance', 'credit', 'Credit', 'remaining', 'amount', 'sms', 'mask');
+    private const BALANCE_FALLBACK_KEYS = array('balance', 'credit', 'remaining', 'amount', 'sms', 'mask');
     
     private $gateway_url;
     private $api_token;
@@ -240,8 +240,10 @@ class HKDEV_SMS_Gateway {
             return null;
         }
 
-        if (array_key_exists($target_key, $data)) {
-            return $data[$target_key];
+        foreach ($data as $key => $value) {
+            if (is_string($key) && strcasecmp($key, $target_key) === 0) {
+                return $value;
+            }
         }
 
         foreach ($data as $value) {
@@ -271,7 +273,12 @@ class HKDEV_SMS_Gateway {
             return null;
         }
 
-        $normalized = str_replace(',', '', $trimmed);
+        $normalized = $trimmed;
+        if (strpos($normalized, ',') !== false && strpos($normalized, '.') === false && preg_match('/^[-+]?\d+,\d+$/', $normalized)) {
+            $normalized = str_replace(',', '.', $normalized);
+        } else {
+            $normalized = str_replace(',', '', $normalized);
+        }
         if (preg_match('/^[-+]?\d+(?:\.\d+)?$/', $normalized)) {
             return $normalized;
         }
