@@ -121,14 +121,14 @@ class HKDEV_WC_Order_Delay_Blocker {
         // Calculate block duration in seconds
         $duration_seconds = $this->calculate_block_duration();
 
-        $combined_block = hkdev_option_is_enabled(self::OPTION_COMBINED_BLOCK, 'off');
+        $enable_ip_blocking = hkdev_option_is_enabled(self::OPTION_COMBINED_BLOCK, 'off');
 
         if (!empty($billing_phone)) {
             $phone_key = $this->block_transient_prefix . 'phone_' . md5($billing_phone);
             set_transient($phone_key, true, $duration_seconds);
         }
 
-        if (!empty($customer_ip) && ($combined_block || empty($billing_phone))) {
+        if (!empty($customer_ip) && ($enable_ip_blocking || empty($billing_phone))) {
             $ip_key = $this->block_transient_prefix . 'ip_' . md5($customer_ip);
             set_transient($ip_key, true, $duration_seconds);
         }
@@ -155,7 +155,7 @@ class HKDEV_WC_Order_Delay_Blocker {
             }
         }
 
-        $candidates = array('REMOTE_ADDR', 'HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR');
+        $candidates = array('REMOTE_ADDR');
 
         foreach ($candidates as $candidate) {
             if (empty($_SERVER[$candidate])) {
@@ -163,15 +163,6 @@ class HKDEV_WC_Order_Delay_Blocker {
             }
 
             $ip = wp_unslash($_SERVER[$candidate]);
-            if ($candidate === 'HTTP_X_FORWARDED_FOR') {
-                $parts = array_map('trim', explode(',', $ip));
-                if (!empty($parts)) {
-                    $ip = end($parts);
-                } else {
-                    $ip = '';
-                }
-            }
-
             $ip = sanitize_text_field($ip);
             if (filter_var($ip, FILTER_VALIDATE_IP)) {
                 return $ip;
@@ -219,7 +210,6 @@ class HKDEV_WC_Order_Delay_Blocker {
 
         update_option(self::OPTION_AUTOMATIC_BLOCK_LOG, $logs);
     }
-
 
     public function get_block_logs() {
         return get_option(self::OPTION_AUTOMATIC_BLOCK_LOG, array());

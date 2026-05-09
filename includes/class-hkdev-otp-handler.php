@@ -102,7 +102,7 @@ class HKDEV_OTP_Handler {
             );
         }
 
-        if (!hash_equals((string) $stored_otp, (string) $otp_code)) {
+        if (!hash_equals($stored_otp, $otp_code)) {
             set_transient($attempt_key, $attempts + 1, $this->expiry_minutes * MINUTE_IN_SECONDS);
             return array(
                 'success' => false,
@@ -117,7 +117,7 @@ class HKDEV_OTP_Handler {
         // Store verified phone in session/option
         $user_id = get_current_user_id();
         if ($user_id) {
-            set_transient('hkdev_verified_phone_' . md5($user_id), $phone_number, HOUR_IN_SECONDS);
+            set_transient($this->get_user_verification_key($user_id), $phone_number, HOUR_IN_SECONDS);
         } else {
             $session = $this->get_wc_session();
             if ($session) {
@@ -145,7 +145,7 @@ class HKDEV_OTP_Handler {
 
         $user_id = get_current_user_id();
         if ($user_id) {
-            $verified = get_transient('hkdev_verified_phone_' . md5($user_id));
+            $verified = get_transient($this->get_user_verification_key($user_id));
             return $verified === $phone_number;
         }
 
@@ -181,6 +181,10 @@ class HKDEV_OTP_Handler {
         }
 
         return $session;
+    }
+
+    private function get_user_verification_key($user_id) {
+        return 'hkdev_verified_phone_' . hash_hmac('sha256', (string) $user_id, wp_salt());
     }
 
 }
