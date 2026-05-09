@@ -154,7 +154,12 @@ class HKDEV_SMS_Pro {
             return false;
         }
 
-        $targets = array_unique(array_filter(array_map('absint', explode(',', get_option('sib_target_products', '')))));
+        $targets = array_unique(array_filter(
+            array_map('absint', explode(',', get_option('sib_target_products', ''))),
+            static function ($id) {
+                return $id > 0;
+            }
+        ));
         if (empty($targets)) {
             return false;
         }
