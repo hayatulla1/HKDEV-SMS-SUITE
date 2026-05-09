@@ -172,12 +172,12 @@ class HKDEV_OTP_Handler {
         }
 
         $session = WC()->session;
-        if (method_exists($session, 'has_session') && !$session->has_session()) {
-            return null;
-        }
 
-        if (method_exists($session, 'get_session_cookie') && !$session->get_session_cookie()) {
-            return null;
+        // Ensure the session cookie is created so the session persists across requests
+        if (method_exists($session, 'has_session') && !$session->has_session()) {
+            if (method_exists($session, 'set_customer_session_cookie')) {
+                $session->set_customer_session_cookie(true);
+            }
         }
 
         return $session;

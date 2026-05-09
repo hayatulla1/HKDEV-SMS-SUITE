@@ -1,96 +1,143 @@
 document.addEventListener('DOMContentLoaded', function() {
 
-    // --- Navigation ---
-    window.switchAppView = function(viewId) {
-        document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.sidebar-nav li').forEach(el => el.classList.remove('active'));
+    // ── Toast Notification System ──────────────────────────────────────────────
+    (function() {
+        const container = document.createElement('div');
+        container.id = 'hkdev-toast-container';
+        document.body.appendChild(container);
+    })();
 
-        const viewEl = document.getElementById(`app-view-${viewId}`);
-        const navEl = document.getElementById(`nav-${viewId}`);
+    window.hkdevToast = function(message, type) {
+        type = type || 'success'; // 'success' | 'error' | 'info'
+        const container = document.getElementById('hkdev-toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'hkdev-toast hkdev-toast-' + type;
+
+        const icons = { success: 'ph-check-circle', error: 'ph-warning-circle', info: 'ph-info' };
+        toast.innerHTML = '<i class="ph-fill ' + (icons[type] || icons.info) + '"></i><span>' + message + '</span>';
+        container.appendChild(toast);
+
+        // Trigger show
+        requestAnimationFrame(function() { toast.classList.add('show'); });
+
+        setTimeout(function() {
+            toast.classList.remove('show');
+            setTimeout(function() { toast.remove(); }, 400);
+        }, 3500);
+    };
+
+    // ── Navigation ─────────────────────────────────────────────────────────────
+    window.switchAppView = function(viewId) {
+        document.querySelectorAll('.view-container').forEach(function(el) { el.classList.remove('active'); });
+        document.querySelectorAll('.sidebar-nav li').forEach(function(el) { el.classList.remove('active'); });
+
+        var viewEl = document.getElementById('app-view-' + viewId);
+        var navEl  = document.getElementById('nav-' + viewId);
 
         if (viewEl) viewEl.classList.add('active');
-        if (navEl) navEl.classList.add('active');
+        if (navEl)  navEl.classList.add('active');
     };
 
     window.switchTab = function(evt, group, tabId) {
         evt.preventDefault();
-        const viewContainer = document.getElementById(`app-view-${group}`);
-
+        var viewContainer = document.getElementById('app-view-' + group);
         if (!viewContainer) return;
 
-        viewContainer.querySelectorAll('.pill-tab').forEach(tab => tab.classList.remove('active'));
-        viewContainer.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        viewContainer.querySelectorAll('.pill-tab').forEach(function(t) { t.classList.remove('active'); });
+        viewContainer.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
 
         evt.currentTarget.classList.add('active');
-        const tabEl = document.getElementById(`${group}-tab-${tabId}`);
-        if (tabEl) {
-            tabEl.classList.add('active');
-        }
+        var tabEl = document.getElementById(group + '-tab-' + tabId);
+        if (tabEl) tabEl.classList.add('active');
     };
 
-    // --- Refresh Balance ---
-    const btnRefresh = document.getElementById('btn-refresh-balance');
+    // ── Refresh Balance ────────────────────────────────────────────────────────
+    var btnRefresh = document.getElementById('btn-refresh-balance');
     if (btnRefresh) {
         btnRefresh.addEventListener('click', function(e) {
             e.preventDefault();
-            const originalText = this.innerHTML;
-            this.innerHTML = '<i class="ph-bold ph-spinner-gap" style="animation: spin 1s linear infinite;"></i> Refreshing...';
-            this.disabled = true;
+            var btn = this;
+            var originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="ph-bold ph-spinner-gap hkdev-spin"></i> Checking...';
+            btn.disabled = true;
 
             jQuery.post(hkdevAjax.ajaxUrl, {
                 action: 'hkdev_check_balance',
                 nonce: hkdevAjax.nonce
             }, function(response) {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+
                 if (response.success) {
-                    alert('Balance Updated: ' + response.data.amount);
-                    location.reload();
+                    var amount = response.data.amount;
+
+                    // Update sidebar balance in place
+                    var balanceEl = document.getElementById('hkdev-sidebar-balance');
+                    if (balanceEl) balanceEl.textContent = amount;
+
+                    hkdevToast('Balance updated: ' + amount, 'success');
                 } else {
-                    alert('Error: ' + response.data);
-                    btnRefresh.innerHTML = originalText;
-                    btnRefresh.disabled = false;
+                    hkdevToast((response.data || 'Failed to fetch balance'), 'error');
                 }
+            }).fail(function() {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                hkdevToast('Request failed. Please try again.', 'error');
             });
         });
     }
 
-    // --- Test SMS ---
+    // ── Test SMS (inline panel) ────────────────────────────────────────────────
     window.testSMS = function() {
-        const phone = prompt('Enter phone number to test:');
-        if (!phone) return;
-
-        const message = prompt('Enter test message:', 'Test SMS from HKDEV SMS Suite');
-        if (!message) return;
-
-        const btnTest = document.getElementById('btn-test-sms');
-        const originalText = btnTest.innerHTML;
-        btnTest.innerHTML = '<i class="ph-bold ph-spinner-gap" style="animation: spin 1s linear infinite;"></i> Sending...';
-        btnTest.disabled = true;
-
-        jQuery.post(hkdevAjax.ajaxUrl, {
-            action: 'hkdev_test_sms',
-            nonce: hkdevAjax.nonce,
-            phone: phone,
-            message: message
-        }, function(response) {
-            if (response.success) {
-                alert('Success: ' + response.data);
-            } else {
-                alert('Error: ' + response.data);
-            }
-            btnTest.innerHTML = originalText;
-            btnTest.disabled = false;
-        });
+        var panel = document.getElementById('hkdev-test-sms-panel');
+        if (!panel) return;
+        var isHidden = (window.getComputedStyle(panel).display === 'none');
+        panel.style.display = isHidden ? 'block' : 'none';
     };
 
-    // --- Clear Logs ---
-    window.clearLogs = function() {
-        if (!confirm('Are you sure you want to clear all SMS logs? This action cannot be undone.')) {
-            return;
-        }
+    var btnSendTest = document.getElementById('btn-send-test-sms');
+    if (btnSendTest) {
+        btnSendTest.addEventListener('click', function() {
+            var phone   = document.getElementById('test-sms-phone').value.trim();
+            var message = document.getElementById('test-sms-message').value.trim();
 
-        const btnClear = document.getElementById('btn-clear-logs');
-        const originalText = btnClear.innerHTML;
-        btnClear.innerHTML = '<i class="ph-bold ph-spinner-gap" style="animation: spin 1s linear infinite;"></i> Clearing...';
+            if (!phone) { hkdevToast('Please enter a phone number.', 'error'); return; }
+            if (!message) { hkdevToast('Please enter a message.', 'error'); return; }
+
+            var btn = this;
+            var originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="ph-bold ph-spinner-gap hkdev-spin"></i> Sending...';
+            btn.disabled = true;
+
+            jQuery.post(hkdevAjax.ajaxUrl, {
+                action: 'hkdev_test_sms',
+                nonce: hkdevAjax.nonce,
+                phone: phone,
+                message: message
+            }, function(response) {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+
+                if (response.success) {
+                    hkdevToast('SMS sent successfully!', 'success');
+                } else {
+                    hkdevToast((response.data || 'Failed to send SMS'), 'error');
+                }
+            }).fail(function() {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                hkdevToast('Request failed. Please try again.', 'error');
+            });
+        });
+    }
+
+    // ── Clear Logs ─────────────────────────────────────────────────────────────
+    window.clearLogs = function() {
+        if (!confirm('Are you sure you want to clear all SMS logs? This cannot be undone.')) return;
+
+        var btnClear = document.getElementById('btn-clear-logs');
+        var originalHTML = btnClear.innerHTML;
+        btnClear.innerHTML = '<i class="ph-bold ph-spinner-gap hkdev-spin"></i> Clearing...';
         btnClear.disabled = true;
 
         jQuery.post(hkdevAjax.ajaxUrl, {
@@ -98,31 +145,21 @@ document.addEventListener('DOMContentLoaded', function() {
             nonce: hkdevAjax.nonce
         }, function(response) {
             if (response.success) {
-                alert('Success: ' + response.data);
-                location.reload();
+                hkdevToast('Logs cleared successfully.', 'success');
+                // Small delay so the toast is visible before the page refreshes
+                setTimeout(function() { location.reload(); }, 1000);
             } else {
-                alert('Error: ' + response.data);
-                btnClear.innerHTML = originalText;
+                hkdevToast((response.data || 'Failed to clear logs'), 'error');
+                btnClear.innerHTML = originalHTML;
                 btnClear.disabled = false;
             }
+        }).fail(function() {
+            btnClear.innerHTML = originalHTML;
+            btnClear.disabled = false;
+            hkdevToast('Request failed. Please try again.', 'error');
         });
     };
 
-    // --- Form Submission ---
-    const form = document.getElementById('hkdev-settings-form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            // Allow default form submission (handled by WordPress)
-        });
-    }
-
-    // Add spin animation
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-    `;
-    document.head.appendChild(style);
+    // ── Spin animation ─────────────────────────────────────────────────────────
+    // (keyframe + class defined in admin.css)
 });

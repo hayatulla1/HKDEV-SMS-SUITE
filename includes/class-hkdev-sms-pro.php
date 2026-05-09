@@ -183,8 +183,8 @@ class HKDEV_SMS_Pro {
     public function ajax_send_otp() {
         check_ajax_referer('hkdev_otp_nonce', 'nonce');
 
-        if (!$this->is_otp_needed()) {
-            wp_send_json_error(__('OTP is not required for this checkout.', HKDEV_TEXT_DOMAIN));
+        if (!hkdev_option_is_enabled('hkdev_enable_otp', 'yes')) {
+            wp_send_json_error(__('OTP verification is not enabled.', HKDEV_TEXT_DOMAIN));
             return;
         }
 
@@ -224,8 +224,8 @@ class HKDEV_SMS_Pro {
     public function ajax_verify_otp() {
         check_ajax_referer('hkdev_otp_nonce', 'nonce');
 
-        if (!$this->is_otp_needed()) {
-            wp_send_json_error(__('OTP is not required for this checkout.', HKDEV_TEXT_DOMAIN));
+        if (!hkdev_option_is_enabled('hkdev_enable_otp', 'yes')) {
+            wp_send_json_error(__('OTP verification is not enabled.', HKDEV_TEXT_DOMAIN));
             return;
         }
 

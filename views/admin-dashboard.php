@@ -40,7 +40,21 @@
             <div class="quick-info">
                 <div class="info-row">
                     <span><i class="ph ph-wallet"></i> <?php _e('Balance', HKDEV_TEXT_DOMAIN); ?></span>
-                    <span class="info-val"><?php echo esc_html($balance_cache['amount'] ?? 'Not Checked'); ?></span>
+                    <?php
+                    $bal_amount = $balance_cache['amount'] ?? '';
+                    $bal_decoded = json_decode($bal_amount, true);
+                    $bal_is_json = (json_last_error() === JSON_ERROR_NONE && (is_array($bal_decoded) || is_object($bal_decoded)));
+                    if ($bal_is_json) {
+                        $bal_amount = __('Check Response Key', HKDEV_TEXT_DOMAIN);
+                    }
+                    ?>
+                    <?php if (empty($bal_amount)) : ?>
+                        <span class="info-val balance-na"><?php _e('Not Checked', HKDEV_TEXT_DOMAIN); ?></span>
+                    <?php elseif ($bal_amount === __('Check Response Key', HKDEV_TEXT_DOMAIN)) : ?>
+                        <span class="info-val balance-na"><?php echo esc_html($bal_amount); ?></span>
+                    <?php else : ?>
+                        <span class="info-val balance-amount" id="hkdev-sidebar-balance"><?php echo esc_html($bal_amount); ?></span>
+                    <?php endif; ?>
                 </div>
                 <div class="info-row">
                     <span><i class="ph ph-check-circle"></i> <?php _e('Total Logs', HKDEV_TEXT_DOMAIN); ?></span>
@@ -232,9 +246,26 @@
                             <input type="text" name="hkdev_balance_response_key" class="form-control" value="<?php echo esc_attr(get_option('hkdev_balance_response_key', 'balance')); ?>" placeholder="balance">
                         </div>
 
-                        <div style="margin-top: 24px; display: flex; gap: 12px;">
+                        <div style="margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap;">
                             <?php submit_button(__('Save Credentials', HKDEV_TEXT_DOMAIN), 'primary btn', 'submit', false); ?>
-                            <button type="button" class="btn btn-outline" id="btn-test-sms" onclick="testSMS()"><?php _e('Test SMS', HKDEV_TEXT_DOMAIN); ?></button>
+                            <button type="button" class="btn btn-outline" id="btn-test-sms" onclick="testSMS()"><i class="ph ph-paper-plane-tilt"></i> <?php _e('Test SMS', HKDEV_TEXT_DOMAIN); ?></button>
+                        </div>
+
+                        <div class="test-sms-panel" id="hkdev-test-sms-panel">
+                            <h4><i class="ph ph-paper-plane-tilt"></i> <?php _e('Send a Test SMS', HKDEV_TEXT_DOMAIN); ?></h4>
+                            <div class="test-sms-row">
+                                <div class="form-group">
+                                    <label><?php _e('Phone Number', HKDEV_TEXT_DOMAIN); ?></label>
+                                    <input type="text" id="test-sms-phone" class="form-control" placeholder="01XXXXXXXXX">
+                                </div>
+                                <div class="form-group">
+                                    <label><?php _e('Message', HKDEV_TEXT_DOMAIN); ?></label>
+                                    <input type="text" id="test-sms-message" class="form-control" placeholder="<?php esc_attr_e('Test SMS from HKDEV SMS Suite', HKDEV_TEXT_DOMAIN); ?>" value="<?php esc_attr_e('Test SMS from HKDEV SMS Suite', HKDEV_TEXT_DOMAIN); ?>">
+                                </div>
+                                <button type="button" class="btn btn-primary" id="btn-send-test-sms" style="flex-shrink:0;">
+                                    <i class="ph-bold ph-paper-plane-right"></i> <?php _e('Send', HKDEV_TEXT_DOMAIN); ?>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
