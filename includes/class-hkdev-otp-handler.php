@@ -6,24 +6,37 @@ if (!defined('ABSPATH')) {
 
 class HKDEV_OTP_Handler {
     
+    private const OTP_MAX_ATTEMPTS_DEFAULT = 5;
+
     private $otp_length;
     private $expiry_minutes;
     private $otp_transient_key = 'hkdev_otp_';
     private $otp_attempts_key = 'hkdev_otp_attempts_';
+    private $otp_cooldown_key = 'hkdev_otp_cooldown_';
     private $otp_cooldown_seconds;
+    private $otp_max_attempts;
 
     public function __construct() {
         $this->otp_length = intval(get_option('hkdev_otp_length', 6));
         $this->expiry_minutes = intval(get_option('hkdev_otp_expiry_minutes', 10));
         $this->otp_cooldown_seconds = intval(get_option('hkdev_otp_cooldown_seconds', 60));
+        $this->otp_max_attempts = max(1, intval(apply_filters('hkdev_otp_max_attempts', self::OTP_MAX_ATTEMPTS_DEFAULT)));
     }
 
     public function generate_otp($phone_number) {
-        // Sanitize phone number
+        $phone_number = hkdev_normalize_phone($phone_number);
+        if (empty($phone_number)) {
+            return array(
+                'success' => false,
+                'message' => __('Valid phone number is required', HKDEV_TEXT_DOMAIN)
+            );
+        }
+
         $phone_hash = md5($phone_number);
         
         // Check cooldown
-        $last_attempt = get_transient($this->otp_cooldown_seconds . '_' . $phone_hash);
+        $transient_cooldown_key = $this->otp_cooldown_key . $phone_hash;
+        $last_attempt = get_transient($transient_cooldown_key);
         if ($last_attempt) {
             return array(
                 'success' => false,
@@ -42,7 +55,7 @@ class HKDEV_OTP_Handler {
         set_transient($transient_key, $otp, $this->expiry_minutes * MINUTE_IN_SECONDS);
         
         // Set cooldown
-        set_transient($this->otp_cooldown_seconds . '_' . $phone_hash, true, $this->otp_cooldown_seconds);
+        set_transient($transient_cooldown_key, true, $this->otp_cooldown_seconds);
 
         return array(
             'success' => true,
@@ -53,8 +66,32 @@ class HKDEV_OTP_Handler {
     }
 
     public function verify_otp($phone_number, $otp_code) {
+        $phone_number = hkdev_normalize_phone($phone_number);
+        if (empty($phone_number)) {
+            return array(
+                'success' => false,
+                'message' => __('Valid phone number is required', HKDEV_TEXT_DOMAIN)
+            );
+        }
+
+        $otp_code = preg_replace('/\D/', '', (string) $otp_code);
+        if (empty($otp_code) || strlen($otp_code) !== $this->otp_length) {
+            return array(
+                'success' => false,
+                'message' => __('Invalid OTP. Please try again.', HKDEV_TEXT_DOMAIN)
+            );
+        }
         $phone_hash = md5($phone_number);
         $transient_key = $this->otp_transient_key . $phone_hash;
+        $attempt_key = $this->otp_attempts_key . $phone_hash;
+        $attempts = (int) get_transient($attempt_key);
+
+        if ($attempts >= $this->otp_max_attempts) {
+            return array(
+                'success' => false,
+                'message' => __('Too many incorrect attempts. Please request a new OTP.', HKDEV_TEXT_DOMAIN)
+            );
+        }
         
         $stored_otp = get_transient($transient_key);
 
@@ -65,7 +102,8 @@ class HKDEV_OTP_Handler {
             );
         }
 
-        if ($stored_otp !== $otp_code) {
+        if (!hash_equals($stored_otp, $otp_code)) {
+            set_transient($attempt_key, $attempts + 1, $this->expiry_minutes * MINUTE_IN_SECONDS);
             return array(
                 'success' => false,
                 'message' => __('Invalid OTP. Please try again.', HKDEV_TEXT_DOMAIN)
@@ -74,9 +112,18 @@ class HKDEV_OTP_Handler {
 
         // OTP verified, delete it
         delete_transient($transient_key);
+        delete_transient($attempt_key);
         
         // Store verified phone in session/option
-        set_transient('hkdev_verified_phone_' . md5(wp_get_current_user()->ID), $phone_number, HOUR_IN_SECONDS);
+        $user_id = get_current_user_id();
+        if ($user_id) {
+            set_transient($this->get_user_verification_key($user_id), $phone_number, HOUR_IN_SECONDS);
+        } else {
+            $session = $this->get_wc_session();
+            if ($session) {
+                $session->set('hkdev_verified_phone', $phone_number);
+            }
+        }
 
         return array(
             'success' => true,
@@ -91,13 +138,24 @@ class HKDEV_OTP_Handler {
     }
 
     public function is_phone_verified($phone_number) {
-        $user_id = wp_get_current_user()->ID;
-        if (!$user_id) {
+        $phone_number = hkdev_normalize_phone($phone_number);
+        if (empty($phone_number)) {
             return false;
         }
 
-        $verified = get_transient('hkdev_verified_phone_' . md5($user_id));
-        return $verified === $phone_number;
+        $user_id = get_current_user_id();
+        if ($user_id) {
+            $verified = get_transient($this->get_user_verification_key($user_id));
+            return $verified === $phone_number;
+        }
+
+        $session = $this->get_wc_session();
+        if ($session) {
+            $verified = $session->get('hkdev_verified_phone');
+            return $verified === $phone_number;
+        }
+
+        return false;
     }
 
     public function get_otp_config() {
@@ -107,4 +165,26 @@ class HKDEV_OTP_Handler {
             'cooldown_seconds' => $this->otp_cooldown_seconds
         );
     }
+
+    private function get_wc_session() {
+        if (!function_exists('WC') || !WC()->session) {
+            return null;
+        }
+
+        $session = WC()->session;
+        if (method_exists($session, 'has_session') && !$session->has_session()) {
+            return null;
+        }
+
+        if (method_exists($session, 'get_session_cookie') && !$session->get_session_cookie()) {
+            return null;
+        }
+
+        return $session;
+    }
+
+    private function get_user_verification_key($user_id) {
+        return 'hkdev_verified_phone_' . hash_hmac('sha256', (string) $user_id, wp_salt('nonce'));
+    }
+
 }

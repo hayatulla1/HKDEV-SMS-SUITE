@@ -15,6 +15,7 @@
     --primary: #4f46e5;
     --primary-hover: #4338ca;
     --primary-light: #e0e7ff;
+    --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #6366f1 45%, #7c3aed 100%);
     --success: #10b981;
     --success-light: #d1fae5;
     --warning: #f97316;
@@ -25,6 +26,7 @@
     --text-muted: #64748b;
     --border-light: #e2e8f0;
     --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    --shadow-soft: 0 12px 24px -12px rgba(15, 23, 42, 0.2);
 }
 
 .hkdev-app-wrapper {
@@ -32,7 +34,9 @@
     min-height: calc(100vh - 32px);
     margin-left: -20px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-body);
+    background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.08), transparent 45%),
+        radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.08), transparent 40%),
+        var(--bg-body);
     color: var(--text-main);
     box-sizing: border-box;
 }
@@ -44,7 +48,7 @@
 /* Sidebar */
 .app-sidebar {
     width: 260px;
-    background: var(--bg-sidebar);
+    background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
     color: white;
     display: flex;
     flex-direction: column;
@@ -63,13 +67,14 @@
 .sidebar-logo-icon {
     width: 40px;
     height: 40px;
-    background: var(--primary);
+    background: var(--primary-gradient);
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
     font-weight: bold;
+    box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
 }
 
 .sidebar-title {
@@ -177,6 +182,7 @@
     padding: 16px;
     margin-bottom: 16px;
     border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .info-row {
@@ -313,8 +319,8 @@
 }
 
 .btn-outline {
-    background: white;
-    border: 1px solid var(--border-light);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #dbe2f0;
     color: var(--text-main);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -325,13 +331,13 @@
 }
 
 .btn-primary {
-    background: var(--primary);
+    background: var(--primary-gradient);
     color: white;
-    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+    box-shadow: 0 8px 16px -8px rgba(79, 70, 229, 0.5);
 }
 
 .btn-primary:hover {
-    background: var(--primary-hover);
+    background: linear-gradient(135deg, #4338ca 0%, #4f46e5 45%, #6d28d9 100%);
 }
 
 .btn-warning {
@@ -349,11 +355,12 @@
     display: flex;
     gap: 8px;
     margin-bottom: 24px;
-    background: #e2e8f0;
+    background: rgba(226, 232, 240, 0.7);
     padding: 4px;
     border-radius: 24px;
     width: fit-content;
     flex-wrap: wrap;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .pill-tab {
@@ -390,11 +397,11 @@
 
 /* Cards */
 .card {
-    background: var(--bg-card);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     border-radius: 16px;
-    border: 1px solid var(--border-light);
+    border: 1px solid #e7edf7;
     padding: 32px;
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-soft);
     margin-bottom: 24px;
 }
 
@@ -461,6 +468,12 @@
     padding: 24px 0;
     border-bottom: 1px solid var(--border-light);
     gap: 24px;
+}
+
+.settings-row:hover {
+    background: rgba(248, 250, 252, 0.7);
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
 }
 
 .settings-row:first-child {

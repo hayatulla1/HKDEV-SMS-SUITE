@@ -21,6 +21,16 @@ define('HKDEV_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('HKDEV_PLUGIN_VERSION', '2.0.0');
 define('HKDEV_TEXT_DOMAIN', 'hkdev-sms-suite');
 
+function hkdev_option_is_enabled($option_name, $default = 'yes') {
+    $value = get_option($option_name, $default);
+    return in_array($value, array('yes', 'on', '1', 1, true), true);
+}
+
+function hkdev_normalize_phone($phone_number) {
+    $phone_number = sanitize_text_field((string) $phone_number);
+    return preg_replace('/[^0-9+]/', '', $phone_number);
+}
+
 // Plugin Activation & Deactivation Hooks
 register_activation_hook(__FILE__, 'hkdev_plugin_activate');
 register_deactivation_hook(__FILE__, 'hkdev_plugin_deactivate');
@@ -63,7 +73,7 @@ function hkdev_initialize_plugin() {
 
     new HKDEV_SMS_Pro();
     
-    if (get_option('hkdev_enable_order_blocker', 'yes') === 'yes') {
+    if (hkdev_option_is_enabled('hkdev_enable_order_blocker', 'yes')) {
         new HKDEV_WC_Order_Delay_Blocker();
     }
 }
