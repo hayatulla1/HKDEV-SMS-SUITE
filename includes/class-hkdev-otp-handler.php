@@ -53,7 +53,6 @@ class HKDEV_OTP_Handler {
         // Store OTP with expiry
         $transient_key = $this->otp_transient_key . $phone_hash;
         set_transient($transient_key, $otp, $this->expiry_minutes * MINUTE_IN_SECONDS);
-        delete_transient($this->otp_attempts_key . $phone_hash);
         
         // Set cooldown
         set_transient($transient_cooldown_key, true, $this->otp_cooldown_seconds);

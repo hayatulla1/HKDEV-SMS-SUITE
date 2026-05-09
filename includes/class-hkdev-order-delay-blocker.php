@@ -164,7 +164,7 @@ class HKDEV_WC_Order_Delay_Blocker {
             $ip = wp_unslash($_SERVER[$candidate]);
             if ($candidate === 'HTTP_X_FORWARDED_FOR') {
                 $parts = array_map('trim', explode(',', $ip));
-                $ip = trim(end($parts));
+                $ip = $parts[count($parts) - 1] ?? '';
             }
 
             $ip = sanitize_text_field($ip);
@@ -178,7 +178,7 @@ class HKDEV_WC_Order_Delay_Blocker {
 
     private function is_checkout_nonce_valid() {
         if (!isset($_POST['woocommerce-process-checkout-nonce'])) {
-            return true;
+            return false;
         }
 
         $nonce = sanitize_text_field(wp_unslash($_POST['woocommerce-process-checkout-nonce']));
