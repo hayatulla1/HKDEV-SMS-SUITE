@@ -118,8 +118,11 @@ class HKDEV_OTP_Handler {
         $user_id = get_current_user_id();
         if ($user_id) {
             set_transient('hkdev_verified_phone_' . md5($user_id), $phone_number, HOUR_IN_SECONDS);
-        } elseif (function_exists('WC') && WC()->session) {
-            WC()->session->set('hkdev_verified_phone', $phone_number);
+        } else {
+            $session = $this->get_wc_session();
+            if ($session) {
+                $session->set('hkdev_verified_phone', $phone_number);
+            }
         }
 
         return array(
@@ -146,8 +149,9 @@ class HKDEV_OTP_Handler {
             return $verified === $phone_number;
         }
 
-        if (function_exists('WC') && WC()->session) {
-            $verified = WC()->session->get('hkdev_verified_phone');
+        $session = $this->get_wc_session();
+        if ($session) {
+            $verified = $session->get('hkdev_verified_phone');
             return $verified === $phone_number;
         }
 
@@ -160,6 +164,23 @@ class HKDEV_OTP_Handler {
             'expiry_minutes' => $this->expiry_minutes,
             'cooldown_seconds' => $this->otp_cooldown_seconds
         );
+    }
+
+    private function get_wc_session() {
+        if (!function_exists('WC') || !WC()->session) {
+            return null;
+        }
+
+        $session = WC()->session;
+        if (method_exists($session, 'has_session') && !$session->has_session()) {
+            return null;
+        }
+
+        if (method_exists($session, 'get_session_cookie') && !$session->get_session_cookie()) {
+            return null;
+        }
+
+        return $session;
     }
 
 }

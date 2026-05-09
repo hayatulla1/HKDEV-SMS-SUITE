@@ -58,7 +58,8 @@ class HKDEV_WC_Order_Delay_Blocker {
 
         if (empty($billing_phone) && isset($_POST['post_data'])) {
             $post_data = array();
-            parse_str(wp_unslash($_POST['post_data']), $post_data);
+            $post_data_raw = sanitize_text_field(wp_unslash($_POST['post_data']));
+            parse_str($post_data_raw, $post_data);
             if (!empty($post_data['billing_phone'])) {
                 $billing_phone = sanitize_text_field($post_data['billing_phone']);
             }
@@ -164,7 +165,11 @@ class HKDEV_WC_Order_Delay_Blocker {
             $ip = wp_unslash($_SERVER[$candidate]);
             if ($candidate === 'HTTP_X_FORWARDED_FOR') {
                 $parts = array_map('trim', explode(',', $ip));
-                $ip = $parts[count($parts) - 1] ?? '';
+                if (!empty($parts)) {
+                    $ip = end($parts);
+                } else {
+                    $ip = '';
+                }
             }
 
             $ip = sanitize_text_field($ip);
