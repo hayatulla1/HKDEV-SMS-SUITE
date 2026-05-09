@@ -33,8 +33,8 @@ class HKDEV_OTP_Handler {
         $phone_hash = md5($phone_number);
         
         // Check cooldown
-        $cooldown_key = $this->otp_cooldown_key . $phone_hash;
-        $last_attempt = get_transient($cooldown_key);
+        $transient_cooldown_key = $this->otp_cooldown_key . $phone_hash;
+        $last_attempt = get_transient($transient_cooldown_key);
         if ($last_attempt) {
             return array(
                 'success' => false,
@@ -54,7 +54,7 @@ class HKDEV_OTP_Handler {
         delete_transient($this->otp_attempts_key . $phone_hash);
         
         // Set cooldown
-        set_transient($cooldown_key, true, $this->otp_cooldown_seconds);
+        set_transient($transient_cooldown_key, true, $this->otp_cooldown_seconds);
 
         return array(
             'success' => true,

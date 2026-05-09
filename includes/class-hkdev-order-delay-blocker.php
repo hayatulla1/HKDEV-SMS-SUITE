@@ -64,7 +64,10 @@ class HKDEV_WC_Order_Delay_Blocker {
             return;
         }
 
-        $billing_phone = preg_replace('/[^0-9+]/', '', $billing_phone);
+        $billing_phone = $this->normalize_phone($billing_phone);
+        if (empty($billing_phone)) {
+            return;
+        }
 
         // Validate phone is in correct format
         if (!preg_match('/^(?:\+88|88)?01[0-9]{9}$/', $billing_phone)) {
@@ -76,7 +79,8 @@ class HKDEV_WC_Order_Delay_Blocker {
     }
 
     public function maybe_block_checkout() {
-        $billing_phone = isset($_POST['billing_phone']) ? sanitize_text_field($_POST['billing_phone']) : '';
+        $billing_phone = isset($_POST['billing_phone']) ? sanitize_text_field(wp_unslash($_POST['billing_phone'])) : '';
+        $billing_phone = $this->normalize_phone($billing_phone);
         $customer_ip = $this->get_customer_ip();
 
         if (empty($billing_phone) || empty($customer_ip)) {
@@ -98,7 +102,7 @@ class HKDEV_WC_Order_Delay_Blocker {
             return;
         }
 
-        $billing_phone = $order->get_billing_phone();
+        $billing_phone = $this->normalize_phone($order->get_billing_phone());
         $customer_ip = $this->get_customer_ip();
 
         if (empty($billing_phone) || empty($customer_ip)) {
@@ -185,6 +189,11 @@ class HKDEV_WC_Order_Delay_Blocker {
         $logs = array_slice($logs, -500);
 
         update_option(self::OPTION_AUTOMATIC_BLOCK_LOG, $logs);
+    }
+
+    private function normalize_phone($phone_number) {
+        $phone_number = sanitize_text_field((string) $phone_number);
+        return preg_replace('/[^0-9+]/', '', $phone_number);
     }
 
     public function get_block_logs() {
