@@ -198,6 +198,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function showError(msg) {
+        errorBox.classList.remove('success');
+        errorBox.textContent = msg;
+        errorBox.style.display = 'block';
+    }
+
+    function showSuccess(msg) {
+        errorBox.classList.add('success');
         errorBox.textContent = msg;
         errorBox.style.display = 'block';
     }
@@ -205,6 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function resetForm() {
         inputs.forEach(input => input.value = '');
         inputs[0].focus();
+        errorBox.classList.remove('success');
         checkFormComplete();
     }
 
@@ -233,13 +241,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (normalizePhone(latestPhone) !== normalizePhone(phone)) {
                     showError('Phone number changed. Please verify again.');
                     btnVerify.disabled = false;
-                    btnText.innerHTML = 'Verify & Complete Order';
+                    btnText.innerHTML = 'Verify & Continue Order';
                     resetForm();
                     return;
                 }
 
                 verifiedPhoneNumber = phone;
                 allowNextSubmission = true;
+                showSuccess('Phone verified successfully.');
                 btnText.innerHTML = '<i class="ph-bold ph-check"></i> Verified!';
                 btnVerify.classList.remove('active');
                 btnVerify.classList.add('success');
@@ -252,11 +261,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if ($targetForm.length) {
                         $targetForm.trigger('submit');
                     }
-                }, 1000);
+                }, 1500);
             } else {
                 showError(res.data || 'Invalid OTP. Please try again.');
                 btnVerify.disabled = false;
-                btnText.innerHTML = 'Verify & Complete Order';
+                btnText.innerHTML = 'Verify & Continue Order';
                 resetForm();
             }
         });
@@ -309,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Intercept checkout submit for WooCommerce and funnel checkout forms
-    jQuery(document).on('submit', 'form', function(e) {
+    jQuery(document).on('submit', 'form.checkout, form.woocommerce-checkout, form[name="checkout"], form.wcf-checkout-form', function(e) {
         if (interceptCheckoutSubmission(this, e)) {
             return false;
         }

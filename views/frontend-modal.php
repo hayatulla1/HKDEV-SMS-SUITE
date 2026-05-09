@@ -11,9 +11,9 @@
         <div class="modal-icon-top">
             <i class="ph-fill ph-device-mobile"></i>
         </div>
-        <h3 class="modal-title"><?php _e('Phone Verification', HKDEV_TEXT_DOMAIN); ?></h3>
+        <h3 class="modal-title"><?php _e('Phone Verification Required', HKDEV_TEXT_DOMAIN); ?></h3>
         <p class="modal-desc">
-            <?php _e('Enter the OTP sent to your registered phone number to complete checkout securely.', HKDEV_TEXT_DOMAIN); ?>
+            <?php _e('Verify your phone to complete order', HKDEV_TEXT_DOMAIN); ?>
         </p>
 
         <div class="modal-error-alert" id="hkdev-modal-error"></div>
@@ -27,7 +27,7 @@
 
             <button type="submit" class="btn-verify-full" id="hkdev-btn-verify" disabled>
                 <i class="ph-bold ph-shield-check"></i>
-                <span id="hkdev-btn-verify-text"><?php _e('Verify & Complete Order', HKDEV_TEXT_DOMAIN); ?></span>
+                <span id="hkdev-btn-verify-text"><?php _e('Verify & Continue Order', HKDEV_TEXT_DOMAIN); ?></span>
             </button>
         </form>
 
