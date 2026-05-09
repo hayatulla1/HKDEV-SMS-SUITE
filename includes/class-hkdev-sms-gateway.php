@@ -142,7 +142,7 @@ class HKDEV_SMS_Gateway {
 
     public function check_balance() {
         $balance_api_url = get_option('hkdev_balance_api_url', '');
-        $response_key = get_option('hkdev_balance_response_key', 'balance');
+        $response_key    = get_option('hkdev_balance_response_key', 'balance');
 
         if (empty($balance_api_url)) {
             return array(
@@ -154,11 +154,9 @@ class HKDEV_SMS_Gateway {
         $response = wp_remote_get(
             $balance_api_url,
             array(
-                'timeout' => 10,
-                'sslverify' => apply_filters('hkdev_sms_sslverify', true),
-                'headers' => array(
-                    'Authorization' => 'Bearer ' . $this->api_token
-                )
+                'timeout'    => 10,
+                'sslverify'  => apply_filters('hkdev_sms_sslverify', true),
+                'user-agent' => 'HKDEV-SMS-Suite/' . HKDEV_PLUGIN_VERSION,
             )
         );
 
@@ -169,24 +167,47 @@ class HKDEV_SMS_Gateway {
             );
         }
 
-        $body = json_decode(wp_remote_retrieve_body($response), true);
-        
-        if (isset($body[$response_key])) {
-            $balance = $body[$response_key];
+        $raw_body = wp_remote_retrieve_body($response);
+        $body     = json_decode($raw_body, true);
+
+        // Resolve balance value: try the configured key first, then common fallbacks
+        $balance = null;
+        if (is_array($body)) {
+            if ($response_key !== '' && array_key_exists($response_key, $body)) {
+                $balance = $body[$response_key];
+            } else {
+                // Auto-detect: look for the first numeric value in common balance keys
+                // 'mask' is used by several Bangladeshi SMS gateways (e.g. bdbulksms)
+                $fallback_keys = array('balance', 'Balance', 'credit', 'Credit', 'remaining', 'amount', 'sms', 'mask');
+                foreach ($fallback_keys as $key) {
+                    if (array_key_exists($key, $body) && is_numeric($body[$key])) {
+                        $balance = $body[$key];
+                        break;
+                    }
+                }
+            }
+        } elseif (is_numeric(trim($raw_body))) {
+            // Plain-text numeric response (e.g. "1234")
+            $balance = trim($raw_body);
+        }
+
+        if ($balance !== null) {
+            // Ensure we store only a scalar (not a nested array)
+            $balance = is_scalar($balance) ? $balance : json_encode($balance);
             update_option('hkdev_balance_cache', array(
-                'amount' => $balance,
+                'amount'     => $balance,
                 'checked_at' => current_time('Y-m-d H:i:s')
             ));
 
             return array(
                 'success' => true,
-                'amount' => $balance
+                'amount'  => $balance
             );
         }
 
         return array(
             'success' => false,
-            'message' => __('Could not parse balance response', HKDEV_TEXT_DOMAIN)
+            'message' => __('Could not parse balance response. Please check the Balance Response Key setting.', HKDEV_TEXT_DOMAIN)
         );
     }
 
