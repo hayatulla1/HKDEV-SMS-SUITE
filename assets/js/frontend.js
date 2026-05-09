@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const OTP_LENGTH = window.hkdevFrontendAjax ? parseInt(hkdevFrontendAjax.otpLength) : 6;
     const COOLDOWN = window.hkdevFrontendAjax ? parseInt(hkdevFrontendAjax.cooldown) : 60;
     let timerInterval;
+    let otpVerifiedForCurrentPhone = false;
+    let pendingCheckoutForm = null;
+    let isSubmittingAfterVerification = false;
 
     // Generate OTP input boxes
     for (let i = 0; i < OTP_LENGTH; i++) {
@@ -29,13 +32,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputs = document.querySelectorAll('.otp-input-box');
 
     // Make modal opener globally available
-    window.openHKDEVModal = function() {
-        const phone = jQuery('#billing_phone').val();
+    function getBillingPhone(formElement) {
+        const $formPhone = formElement ? jQuery(formElement).find('input[name="billing_phone"]').first() : jQuery();
+        if ($formPhone.length && $formPhone.val()) {
+            return $formPhone.val();
+        }
+
+        const $globalPhone = jQuery('input[name="billing_phone"]').first();
+        return $globalPhone.length ? $globalPhone.val() : '';
+    }
+
+    window.openHKDEVModal = function(formElement) {
+        if (overlay.classList.contains('active')) {
+            return;
+        }
+
+        const phone = getBillingPhone(formElement);
         if (!phone) {
             alert('Please enter your phone number first.');
             return;
         }
 
+        pendingCheckoutForm = formElement || pendingCheckoutForm;
         phoneInput.value = phone;
         overlay.classList.add('active');
         setTimeout(() => inputs[0].focus(), 100);
@@ -61,6 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
         overlay.classList.remove('active');
         clearInterval(timerInterval);
         resetForm();
+        pendingCheckoutForm = null;
     });
 
     // Input handling
@@ -194,14 +213,24 @@ document.addEventListener('DOMContentLoaded', function() {
             phone: phone
         }, function(res) {
             if (res.success) {
+                otpVerifiedForCurrentPhone = true;
                 btnText.innerHTML = '<i class="ph-bold ph-check"></i> Verified!';
                 btnVerify.classList.remove('active');
                 btnVerify.classList.add('success');
 
                 setTimeout(() => {
                     overlay.classList.remove('active');
-                    // Submit the WooCommerce checkout form
-                    jQuery('form.checkout').submit();
+                    isSubmittingAfterVerification = true;
+                    const $targetForm = pendingCheckoutForm ? jQuery(pendingCheckoutForm) : jQuery('form.checkout, form.woocommerce-checkout').first();
+                    pendingCheckoutForm = null;
+
+                    if ($targetForm.length) {
+                        $targetForm.trigger('submit');
+                    }
+
+                    setTimeout(() => {
+                        isSubmittingAfterVerification = false;
+                    }, 1000);
                 }, 1000);
             } else {
                 showError(res.data || 'Invalid OTP. Please try again.');
@@ -212,19 +241,48 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Auto-open modal when billing phone is filled
-    const billingPhoneField = jQuery('#billing_phone');
-    if (billingPhoneField.length) {
-        billingPhoneField.on('change', function() {
-            if (jQuery(this).val() && !overlay.classList.contains('active')) {
-                window.openHKDEVModal();
-            }
-        });
+    // Reset local verification state if phone changes
+    jQuery(document).on('change input', 'input[name="billing_phone"]', function() {
+        otpVerifiedForCurrentPhone = false;
+    });
+
+    function shouldInterceptCheckoutSubmit(formElement) {
+        if (!window.hkdevFrontendAjax || !formElement) {
+            return false;
+        }
+
+        return jQuery(formElement).find('input[name="billing_phone"]').length > 0;
     }
 
-    // Prevent form submission if OTP not verified
-    jQuery('form.checkout').on('submit', function(e) {
-        if (hkdevFrontendAjax && overlay.classList.contains('active')) {
+    // Intercept checkout submit for WooCommerce and funnel checkout forms
+    jQuery(document).on('submit', 'form', function(e) {
+        if (!shouldInterceptCheckoutSubmit(this) || otpVerifiedForCurrentPhone || isSubmittingAfterVerification) {
+            return;
+        }
+
+        e.preventDefault();
+        pendingCheckoutForm = this;
+        window.openHKDEVModal(this);
+        return false;
+    });
+
+    // Intercept common place-order buttons used by checkout/funnel builders
+    jQuery(document).on('click', '#place_order, [name="woocommerce_checkout_place_order"], .wcf-submit-checkout, .wcf-next-btn', function(e) {
+        const $form = jQuery(this).closest('form');
+        if (!$form.length || !shouldInterceptCheckoutSubmit($form[0]) || otpVerifiedForCurrentPhone || isSubmittingAfterVerification) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        pendingCheckoutForm = $form[0];
+        window.openHKDEVModal($form[0]);
+        return false;
+    });
+
+    // Keep submission blocked while modal is open
+    jQuery(document).on('submit', 'form', function(e) {
+        if (overlay.classList.contains('active') && shouldInterceptCheckoutSubmit(this)) {
             e.preventDefault();
             return false;
         }

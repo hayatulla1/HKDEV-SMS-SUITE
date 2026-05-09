@@ -40,18 +40,3 @@
         </button>
     </div>
 </div>
-
-<script>
-    // Auto-open modal on checkout page if OTP is needed
-    document.addEventListener('DOMContentLoaded', function() {
-        // Check if we're on WooCommerce checkout
-        if (typeof jQuery !== 'undefined' && jQuery('form.checkout').length) {
-            // Delay to ensure phone field is ready
-            setTimeout(function() {
-                if (jQuery('#billing_phone').val()) {
-                    window.openHKDEVModal();
-                }
-            }, 500);
-        }
-    });
-</script>
