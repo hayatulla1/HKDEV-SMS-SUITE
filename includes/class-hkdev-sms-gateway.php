@@ -269,8 +269,13 @@ class HKDEV_SMS_Gateway {
             return null;
         }
 
-        if (preg_match('/[-+]?\d+(?:\.\d+)?/', str_replace(',', '', $trimmed), $matches)) {
-            return $matches[0];
+        $normalized = str_replace(',', '', $trimmed);
+        if (preg_match('/^[-+]?\d+(?:\.\d+)?$/', $normalized)) {
+            return $normalized;
+        }
+
+        if (preg_match('/(?:balance|credit|remaining|amount|sms|mask)\s*[:=]?\s*([-+]?\d+(?:\.\d+)?)/i', $normalized, $matches)) {
+            return $matches[1];
         }
 
         return null;
