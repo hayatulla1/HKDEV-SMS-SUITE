@@ -5,6 +5,7 @@ if (!defined('ABSPATH')) {
 }
 
 class HKDEV_SMS_Gateway {
+    private const BALANCE_FALLBACK_KEYS = array('balance', 'credit', 'remaining', 'amount', 'sms', 'mask');
     
     private $gateway_url;
     private $api_token;
@@ -14,6 +15,7 @@ class HKDEV_SMS_Gateway {
     private $param_sender;
     private $param_number;
     private $param_msg;
+    private $balance_keyword_pattern;
 
     public function __construct() {
         $this->gateway_url = get_option('sib_gateway_url', '');
@@ -24,6 +26,7 @@ class HKDEV_SMS_Gateway {
         $this->param_sender = get_option('sib_param_sender', 'sender');
         $this->param_number = get_option('sib_param_number', 'number');
         $this->param_msg = get_option('sib_param_msg', 'message');
+        $this->balance_keyword_pattern = implode('|', array_map('preg_quote', self::BALANCE_FALLBACK_KEYS));
     }
 
     public function is_configured() {
@@ -169,31 +172,9 @@ class HKDEV_SMS_Gateway {
 
         $raw_body = wp_remote_retrieve_body($response);
         $body     = json_decode($raw_body, true);
-
-        // Resolve balance value: try the configured key first, then common fallbacks
-        $balance = null;
-        if (is_array($body)) {
-            if ($response_key !== '' && array_key_exists($response_key, $body)) {
-                $balance = $body[$response_key];
-            } else {
-                // Auto-detect: look for the first numeric value in common balance keys
-                // 'mask' is used by several Bangladeshi SMS gateways (e.g. bdbulksms)
-                $fallback_keys = array('balance', 'Balance', 'credit', 'Credit', 'remaining', 'amount', 'sms', 'mask');
-                foreach ($fallback_keys as $key) {
-                    if (array_key_exists($key, $body) && is_numeric($body[$key])) {
-                        $balance = $body[$key];
-                        break;
-                    }
-                }
-            }
-        } elseif (is_numeric(trim($raw_body))) {
-            // Plain-text numeric response (e.g. "1234")
-            $balance = trim($raw_body);
-        }
+        $balance  = $this->resolve_balance_value($raw_body, $body, $response_key);
 
         if ($balance !== null) {
-            // Ensure we store only a scalar (not a nested array)
-            $balance = is_scalar($balance) ? $balance : json_encode($balance);
             update_option('hkdev_balance_cache', array(
                 'amount'     => $balance,
                 'checked_at' => current_time('Y-m-d H:i:s')
@@ -209,6 +190,104 @@ class HKDEV_SMS_Gateway {
             'success' => false,
             'message' => __('Could not parse balance response. Please check the Balance Response Key setting.', HKDEV_TEXT_DOMAIN)
         );
+    }
+
+    private function resolve_balance_value($raw_body, $decoded_body, $response_key) {
+        if (is_array($decoded_body)) {
+            if (is_string($response_key) && $response_key !== '') {
+                $configured_value = $this->get_array_value_by_path($decoded_body, $response_key);
+                if ($configured_value !== null) {
+                    $normalized_configured = $this->normalize_balance_scalar($configured_value);
+                    if ($normalized_configured !== null) {
+                        return $normalized_configured;
+                    }
+                }
+            }
+
+            foreach (self::BALANCE_FALLBACK_KEYS as $fallback_key) {
+                $fallback_value = $this->find_value_by_key_recursive($decoded_body, $fallback_key);
+                if ($fallback_value !== null) {
+                    $normalized_fallback = $this->normalize_balance_scalar($fallback_value);
+                    if ($normalized_fallback !== null) {
+                        return $normalized_fallback;
+                    }
+                }
+            }
+        }
+
+        return $this->normalize_balance_scalar($raw_body);
+    }
+
+    private function get_array_value_by_path($data, $path) {
+        if (!is_array($data) || !is_string($path) || $path === '') {
+            return null;
+        }
+
+        $segments = explode('.', $path);
+        $current = $data;
+        foreach ($segments as $segment) {
+            if (!is_array($current) || !array_key_exists($segment, $current)) {
+                return null;
+            }
+            $current = $current[$segment];
+        }
+
+        return $current;
+    }
+
+    private function find_value_by_key_recursive($data, $target_key) {
+        if (!is_array($data)) {
+            return null;
+        }
+
+        foreach ($data as $key => $value) {
+            if (is_string($key) && strcasecmp($key, $target_key) === 0) {
+                return $value;
+            }
+        }
+
+        foreach ($data as $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            $found = $this->find_value_by_key_recursive($value, $target_key);
+            if ($found !== null) {
+                return $found;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalize_balance_scalar($value) {
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $normalized = $trimmed;
+        if (strpos($normalized, ',') !== false && strpos($normalized, '.') === false && preg_match('/^[-+]?\d+,\d+$/', $normalized)) {
+            $normalized = str_replace(',', '.', $normalized);
+        } else {
+            $normalized = str_replace(',', '', $normalized);
+        }
+        if (preg_match('/^[-+]?\d+(?:\.\d+)?$/', $normalized)) {
+            return $normalized;
+        }
+
+        if (preg_match('/(?:' . $this->balance_keyword_pattern . ')\s*[:=]?\s*([-+]?\d+(?:\.\d+)?)/i', $normalized, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
     }
 
     private function log_sms($log_data) {
