@@ -13,7 +13,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const OTP_LENGTH = window.hkdevFrontendAjax ? parseInt(hkdevFrontendAjax.otpLength) : 6;
     const COOLDOWN = window.hkdevFrontendAjax ? parseInt(hkdevFrontendAjax.cooldown) : 60;
     let timerInterval;
-    let otpVerifiedForCurrentPhone = false;
+    let verifiedPhoneNumber = '';
+    let allowNextSubmission = false;
     let pendingCheckoutForm = null;
 
     // Generate OTP input boxes
@@ -31,6 +32,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputs = document.querySelectorAll('.otp-input-box');
 
     // Make modal opener globally available
+    function normalizePhone(phone) {
+        return String(phone || '').replace(/[^\d+]/g, '');
+    }
+
     function getBillingPhone(formElement) {
         const $formPhone = formElement ? jQuery(formElement).find('input[name="billing_phone"]').first() : jQuery();
         if ($formPhone.length && $formPhone.val()) {
@@ -38,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const $globalPhone = jQuery('input[name="billing_phone"]').first();
-        return $globalPhone.length ? $globalPhone.val() : '';
+        return $globalPhone.length && $globalPhone.val() ? $globalPhone.val() : null;
     }
 
     window.openHKDEVModal = function(formElement) {
@@ -212,7 +217,8 @@ document.addEventListener('DOMContentLoaded', function() {
             phone: phone
         }, function(res) {
             if (res.success) {
-                otpVerifiedForCurrentPhone = true;
+                verifiedPhoneNumber = phone;
+                allowNextSubmission = true;
                 btnText.innerHTML = '<i class="ph-bold ph-check"></i> Verified!';
                 btnVerify.classList.remove('active');
                 btnVerify.classList.add('success');
@@ -237,7 +243,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Reset local verification state if phone changes
     jQuery(document).on('change', 'input[name="billing_phone"]', function() {
-        otpVerifiedForCurrentPhone = false;
+        if (normalizePhone(jQuery(this).val()) !== normalizePhone(verifiedPhoneNumber)) {
+            verifiedPhoneNumber = '';
+            allowNextSubmission = false;
+        }
     });
 
     function shouldInterceptCheckoutSubmit(formElement) {
@@ -259,7 +268,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
 
-        if (otpVerifiedForCurrentPhone) {
+        if (allowNextSubmission && normalizePhone(getBillingPhone(this)) === normalizePhone(verifiedPhoneNumber)) {
+            allowNextSubmission = false;
             return;
         }
 
@@ -272,7 +282,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Intercept common place-order buttons used by checkout/funnel builders
     jQuery(document).on('click', '#place_order, [name="woocommerce_checkout_place_order"], .wcf-submit-checkout, .wcf-next-btn', function(e) {
         const $form = jQuery(this).closest('form');
-        if (!$form.length || !shouldInterceptCheckoutSubmit($form[0]) || otpVerifiedForCurrentPhone) {
+        if (!$form.length || !shouldInterceptCheckoutSubmit($form[0])) {
+            return;
+        }
+
+        if (overlay.classList.contains('active')) {
+            e.preventDefault();
+            return false;
+        }
+
+        if (allowNextSubmission && normalizePhone(getBillingPhone($form[0])) === normalizePhone(verifiedPhoneNumber)) {
             return;
         }
 
