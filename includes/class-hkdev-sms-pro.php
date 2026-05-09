@@ -185,6 +185,7 @@ class HKDEV_SMS_Pro {
 
         if (!$this->is_otp_needed()) {
             wp_send_json_error(__('OTP is not required for this checkout.', HKDEV_TEXT_DOMAIN));
+            return;
         }
 
         $phone = isset($_POST['phone']) ? sanitize_text_field($_POST['phone']) : '';
@@ -225,6 +226,7 @@ class HKDEV_SMS_Pro {
 
         if (!$this->is_otp_needed()) {
             wp_send_json_error(__('OTP is not required for this checkout.', HKDEV_TEXT_DOMAIN));
+            return;
         }
 
         $phone = isset($_POST['phone']) ? sanitize_text_field($_POST['phone']) : '';
