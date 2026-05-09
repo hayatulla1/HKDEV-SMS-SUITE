@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let verifiedPhoneNumber = '';
     let allowNextSubmission = false;
     let pendingCheckoutForm = null;
-    let isInterceptingCheckout = false;
 
     // Generate OTP input boxes
     for (let i = 0; i < OTP_LENGTH; i++) {
@@ -37,6 +36,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const raw = String(phone || '').trim();
         const hasLeadingPlus = raw.charAt(0) === '+';
         const digits = raw.replace(/\D/g, '');
+        if (!digits) {
+            return '';
+        }
         return hasLeadingPlus ? ('+' + digits) : digits;
     }
 
@@ -284,12 +286,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         e.preventDefault();
-        isInterceptingCheckout = true;
+        e.stopImmediatePropagation();
         pendingCheckoutForm = this;
         window.openHKDEVModal(this);
-        setTimeout(() => {
-            isInterceptingCheckout = false;
-        }, 0);
         return false;
     });
 
@@ -305,11 +304,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
 
-        if (isInterceptingCheckout) {
-            e.preventDefault();
-            return false;
-        }
-
         if (allowNextSubmission && isVerifiedPhoneMatch(getBillingPhone($form[0]))) {
             allowNextSubmission = false;
             return;
@@ -317,12 +311,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         e.preventDefault();
         e.stopImmediatePropagation();
-        isInterceptingCheckout = true;
         pendingCheckoutForm = $form[0];
         window.openHKDEVModal($form[0]);
-        setTimeout(() => {
-            isInterceptingCheckout = false;
-        }, 0);
         return false;
     });
 });
