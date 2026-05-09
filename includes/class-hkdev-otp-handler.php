@@ -6,6 +6,8 @@ if (!defined('ABSPATH')) {
 
 class HKDEV_OTP_Handler {
     
+    private const OTP_MAX_ATTEMPTS_DEFAULT = 5;
+
     private $otp_length;
     private $expiry_minutes;
     private $otp_transient_key = 'hkdev_otp_';
@@ -18,11 +20,11 @@ class HKDEV_OTP_Handler {
         $this->otp_length = intval(get_option('hkdev_otp_length', 6));
         $this->expiry_minutes = intval(get_option('hkdev_otp_expiry_minutes', 10));
         $this->otp_cooldown_seconds = intval(get_option('hkdev_otp_cooldown_seconds', 60));
-        $this->otp_max_attempts = max(1, intval(apply_filters('hkdev_otp_max_attempts', 5)));
+        $this->otp_max_attempts = max(1, intval(apply_filters('hkdev_otp_max_attempts', self::OTP_MAX_ATTEMPTS_DEFAULT)));
     }
 
     public function generate_otp($phone_number) {
-        $phone_number = $this->normalize_phone($phone_number);
+        $phone_number = hkdev_normalize_phone($phone_number);
         if (empty($phone_number)) {
             return array(
                 'success' => false,
@@ -65,7 +67,7 @@ class HKDEV_OTP_Handler {
     }
 
     public function verify_otp($phone_number, $otp_code) {
-        $phone_number = $this->normalize_phone($phone_number);
+        $phone_number = hkdev_normalize_phone($phone_number);
         if (empty($phone_number)) {
             return array(
                 'success' => false,
@@ -82,16 +84,6 @@ class HKDEV_OTP_Handler {
         }
         $phone_hash = md5($phone_number);
         $transient_key = $this->otp_transient_key . $phone_hash;
-        
-        $stored_otp = get_transient($transient_key);
-
-        if (!$stored_otp) {
-            return array(
-                'success' => false,
-                'message' => __('OTP has expired. Please request a new one.', HKDEV_TEXT_DOMAIN)
-            );
-        }
-
         $attempt_key = $this->otp_attempts_key . $phone_hash;
         $attempts = (int) get_transient($attempt_key);
 
@@ -99,6 +91,15 @@ class HKDEV_OTP_Handler {
             return array(
                 'success' => false,
                 'message' => __('Too many incorrect attempts. Please request a new OTP.', HKDEV_TEXT_DOMAIN)
+            );
+        }
+        
+        $stored_otp = get_transient($transient_key);
+
+        if (!$stored_otp) {
+            return array(
+                'success' => false,
+                'message' => __('OTP has expired. Please request a new one.', HKDEV_TEXT_DOMAIN)
             );
         }
 
@@ -135,7 +136,7 @@ class HKDEV_OTP_Handler {
     }
 
     public function is_phone_verified($phone_number) {
-        $phone_number = $this->normalize_phone($phone_number);
+        $phone_number = hkdev_normalize_phone($phone_number);
         if (empty($phone_number)) {
             return false;
         }
@@ -160,11 +161,6 @@ class HKDEV_OTP_Handler {
             'expiry_minutes' => $this->expiry_minutes,
             'cooldown_seconds' => $this->otp_cooldown_seconds
         );
-    }
-
-    private function normalize_phone($phone_number) {
-        $phone_number = sanitize_text_field((string) $phone_number);
-        return preg_replace('/[^0-9+]/', '', $phone_number);
     }
 
 }

@@ -46,6 +46,10 @@ class HKDEV_WC_Order_Delay_Blocker {
     }
 
     public function validate_bd_phone() {
+        if (!$this->is_checkout_nonce_valid()) {
+            return;
+        }
+
         $billing_phone = '';
 
         if (isset($_POST['billing_phone'])) {
@@ -64,7 +68,7 @@ class HKDEV_WC_Order_Delay_Blocker {
             return;
         }
 
-        $billing_phone = $this->normalize_phone($billing_phone);
+        $billing_phone = hkdev_normalize_phone($billing_phone);
         if (empty($billing_phone)) {
             return;
         }
@@ -79,8 +83,12 @@ class HKDEV_WC_Order_Delay_Blocker {
     }
 
     public function maybe_block_checkout() {
+        if (!$this->is_checkout_nonce_valid()) {
+            return;
+        }
+
         $billing_phone = isset($_POST['billing_phone']) ? sanitize_text_field(wp_unslash($_POST['billing_phone'])) : '';
-        $billing_phone = $this->normalize_phone($billing_phone);
+        $billing_phone = hkdev_normalize_phone($billing_phone);
         $customer_ip = $this->get_customer_ip();
 
         if (empty($billing_phone) || empty($customer_ip)) {
@@ -102,7 +110,7 @@ class HKDEV_WC_Order_Delay_Blocker {
             return;
         }
 
-        $billing_phone = $this->normalize_phone($order->get_billing_phone());
+        $billing_phone = hkdev_normalize_phone($order->get_billing_phone());
         $customer_ip = $this->get_customer_ip();
 
         if (empty($billing_phone) || empty($customer_ip)) {
@@ -139,7 +147,14 @@ class HKDEV_WC_Order_Delay_Blocker {
     }
 
     private function get_customer_ip() {
-        $candidates = array('HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR');
+        if (function_exists('wc_get_customer_ip_address')) {
+            $ip = wc_get_customer_ip_address();
+            if (!empty($ip) && filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+
+        $candidates = array('REMOTE_ADDR', 'HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR');
 
         foreach ($candidates as $candidate) {
             if (empty($_SERVER[$candidate])) {
@@ -148,8 +163,8 @@ class HKDEV_WC_Order_Delay_Blocker {
 
             $ip = wp_unslash($_SERVER[$candidate]);
             if ($candidate === 'HTTP_X_FORWARDED_FOR') {
-                $parts = explode(',', $ip);
-                $ip = trim($parts[0]);
+                $parts = array_map('trim', explode(',', $ip));
+                $ip = trim(end($parts));
             }
 
             $ip = sanitize_text_field($ip);
@@ -159,6 +174,15 @@ class HKDEV_WC_Order_Delay_Blocker {
         }
 
         return '';
+    }
+
+    private function is_checkout_nonce_valid() {
+        if (!isset($_POST['woocommerce-process-checkout-nonce'])) {
+            return true;
+        }
+
+        $nonce = sanitize_text_field(wp_unslash($_POST['woocommerce-process-checkout-nonce']));
+        return wp_verify_nonce($nonce, 'woocommerce-process_checkout');
     }
 
     private function calculate_block_duration() {
@@ -191,10 +215,6 @@ class HKDEV_WC_Order_Delay_Blocker {
         update_option(self::OPTION_AUTOMATIC_BLOCK_LOG, $logs);
     }
 
-    private function normalize_phone($phone_number) {
-        $phone_number = sanitize_text_field((string) $phone_number);
-        return preg_replace('/[^0-9+]/', '', $phone_number);
-    }
 
     public function get_block_logs() {
         return get_option(self::OPTION_AUTOMATIC_BLOCK_LOG, array());

@@ -26,6 +26,11 @@ function hkdev_option_is_enabled($option_name, $default = 'yes') {
     return in_array($value, array('yes', 'on', '1', 1, true), true);
 }
 
+function hkdev_normalize_phone($phone_number) {
+    $phone_number = sanitize_text_field((string) $phone_number);
+    return preg_replace('/[^0-9+]/', '', $phone_number);
+}
+
 // Plugin Activation & Deactivation Hooks
 register_activation_hook(__FILE__, 'hkdev_plugin_activate');
 register_deactivation_hook(__FILE__, 'hkdev_plugin_deactivate');
