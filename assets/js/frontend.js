@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let verifiedPhoneNumber = '';
     let allowNextSubmission = false;
     let pendingCheckoutForm = null;
+    let isInterceptingCheckout = false;
 
     // Generate OTP input boxes
     for (let i = 0; i < OTP_LENGTH; i++) {
@@ -33,7 +34,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Make modal opener globally available
     function normalizePhone(phone) {
-        return String(phone || '').replace(/[^\d+]/g, '');
+        const raw = String(phone || '').trim();
+        const hasLeadingPlus = raw.charAt(0) === '+';
+        const digits = raw.replace(/\D/g, '');
+        return hasLeadingPlus ? ('+' + digits) : digits;
+    }
+
+    function isVerifiedPhoneMatch(phone) {
+        const normalizedPhone = normalizePhone(phone);
+        const normalizedVerified = normalizePhone(verifiedPhoneNumber);
+        return normalizedPhone !== '' && normalizedVerified !== '' && normalizedPhone === normalizedVerified;
     }
 
     function getBillingPhone(formElement) {
@@ -43,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const $globalPhone = jQuery('input[name="billing_phone"]').first();
-        return $globalPhone.length && $globalPhone.val() ? $globalPhone.val() : null;
+        return $globalPhone.length && $globalPhone.val() ? $globalPhone.val() : '';
     }
 
     window.openHKDEVModal = function(formElement) {
@@ -268,14 +278,18 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
 
-        if (allowNextSubmission && normalizePhone(getBillingPhone(this)) === normalizePhone(verifiedPhoneNumber)) {
+        if (allowNextSubmission && isVerifiedPhoneMatch(getBillingPhone(this))) {
             allowNextSubmission = false;
             return;
         }
 
         e.preventDefault();
+        isInterceptingCheckout = true;
         pendingCheckoutForm = this;
         window.openHKDEVModal(this);
+        setTimeout(() => {
+            isInterceptingCheckout = false;
+        }, 0);
         return false;
     });
 
@@ -291,14 +305,24 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
 
-        if (allowNextSubmission && normalizePhone(getBillingPhone($form[0])) === normalizePhone(verifiedPhoneNumber)) {
+        if (isInterceptingCheckout) {
+            e.preventDefault();
+            return false;
+        }
+
+        if (allowNextSubmission && isVerifiedPhoneMatch(getBillingPhone($form[0]))) {
+            allowNextSubmission = false;
             return;
         }
 
         e.preventDefault();
         e.stopImmediatePropagation();
+        isInterceptingCheckout = true;
         pendingCheckoutForm = $form[0];
         window.openHKDEVModal($form[0]);
+        setTimeout(() => {
+            isInterceptingCheckout = false;
+        }, 0);
         return false;
     });
 });
