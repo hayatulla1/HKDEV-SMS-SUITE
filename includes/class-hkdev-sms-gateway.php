@@ -5,6 +5,7 @@ if (!defined('ABSPATH')) {
 }
 
 class HKDEV_SMS_Gateway {
+    private const BALANCE_FALLBACK_KEYS = array('balance', 'Balance', 'credit', 'Credit', 'remaining', 'amount', 'sms', 'mask');
     
     private $gateway_url;
     private $api_token;
@@ -201,8 +202,7 @@ class HKDEV_SMS_Gateway {
                 }
             }
 
-            $fallback_keys = array('balance', 'Balance', 'credit', 'Credit', 'remaining', 'amount', 'sms', 'mask');
-            foreach ($fallback_keys as $fallback_key) {
+            foreach (self::BALANCE_FALLBACK_KEYS as $fallback_key) {
                 $fallback_value = $this->find_value_by_key_recursive($decoded_body, $fallback_key);
                 if ($fallback_value !== null) {
                     $normalized_fallback = $this->normalize_balance_scalar($fallback_value);
@@ -274,7 +274,8 @@ class HKDEV_SMS_Gateway {
             return $normalized;
         }
 
-        if (preg_match('/(?:balance|credit|remaining|amount|sms|mask)\s*[:=]?\s*([-+]?\d+(?:\.\d+)?)/i', $normalized, $matches)) {
+        $keyword_pattern = implode('|', array_map('preg_quote', self::BALANCE_FALLBACK_KEYS));
+        if (preg_match('/(?:' . $keyword_pattern . ')\s*[:=]?\s*([-+]?\d+(?:\.\d+)?)/i', $normalized, $matches)) {
             return $matches[1];
         }
 
