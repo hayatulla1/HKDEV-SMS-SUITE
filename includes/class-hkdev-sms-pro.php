@@ -146,17 +146,32 @@ class HKDEV_SMS_Pro {
             return false;
         }
 
+        if (is_user_logged_in()) {
+            return false;
+        }
+
         if (!function_exists('WC') || !WC()->cart) {
             return false;
         }
 
-        $targets = array_filter(array_map('trim', explode(',', get_option('sib_target_products', ''))));
+        $targets = array_unique(array_filter(
+            array_map('absint', explode(',', get_option('sib_target_products', ''))),
+            static function ($id) {
+                return $id > 0;
+            }
+        ));
         if (empty($targets)) {
-            return true;
+            return false;
         }
 
         foreach (WC()->cart->get_cart() as $item) {
-            if (in_array((string) $item['product_id'], $targets, true)) {
+            $product_id = isset($item['product_id']) ? absint($item['product_id']) : 0;
+            $variation_id = isset($item['variation_id']) ? absint($item['variation_id']) : 0;
+
+            if (
+                ($product_id > 0 && in_array($product_id, $targets, true)) ||
+                ($variation_id > 0 && in_array($variation_id, $targets, true))
+            ) {
                 return true;
             }
         }
@@ -167,6 +182,11 @@ class HKDEV_SMS_Pro {
     // AJAX: Send OTP
     public function ajax_send_otp() {
         check_ajax_referer('hkdev_otp_nonce', 'nonce');
+
+        if (!$this->is_otp_needed()) {
+            wp_send_json_error(__('OTP is not required for this checkout.', HKDEV_TEXT_DOMAIN));
+            return;
+        }
 
         $phone = isset($_POST['phone']) ? sanitize_text_field($_POST['phone']) : '';
 
@@ -203,6 +223,11 @@ class HKDEV_SMS_Pro {
     // AJAX: Verify OTP
     public function ajax_verify_otp() {
         check_ajax_referer('hkdev_otp_nonce', 'nonce');
+
+        if (!$this->is_otp_needed()) {
+            wp_send_json_error(__('OTP is not required for this checkout.', HKDEV_TEXT_DOMAIN));
+            return;
+        }
 
         $phone = isset($_POST['phone']) ? sanitize_text_field($_POST['phone']) : '';
         $otp = isset($_POST['otp']) ? sanitize_text_field($_POST['otp']) : '';

@@ -264,9 +264,9 @@
                         </div>
 
                         <div class="form-group">
-                            <label><?php _e('Target Products (Optional)', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="text" name="sib_target_products" class="form-control" value="<?php echo esc_attr(get_option('sib_target_products', '')); ?>" placeholder="123,456,789 (Leave empty for all products)">
-                            <small><?php _e('Comma-separated product IDs. Leave empty to apply OTP for all products.', HKDEV_TEXT_DOMAIN); ?></small>
+                            <label><?php _e('Target Products for OTP', HKDEV_TEXT_DOMAIN); ?></label>
+                            <input type="text" name="sib_target_products" class="form-control" value="<?php echo esc_attr(get_option('sib_target_products', '')); ?>" placeholder="123,456,789">
+                            <small><?php _e('Comma-separated product or variation IDs. OTP is applied only when these items are in cart. Leave empty to disable OTP on checkout.', HKDEV_TEXT_DOMAIN); ?></small>
                         </div>
 
                         <div style="margin-top: 24px;">
