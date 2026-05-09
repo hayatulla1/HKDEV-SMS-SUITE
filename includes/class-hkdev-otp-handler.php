@@ -74,6 +74,12 @@ class HKDEV_OTP_Handler {
         }
 
         $otp_code = preg_replace('/\D/', '', (string) $otp_code);
+        if (empty($otp_code) || strlen($otp_code) !== $this->otp_length) {
+            return array(
+                'success' => false,
+                'message' => __('Invalid OTP. Please try again.', HKDEV_TEXT_DOMAIN)
+            );
+        }
         $phone_hash = md5($phone_number);
         $transient_key = $this->otp_transient_key . $phone_hash;
         
@@ -114,11 +120,6 @@ class HKDEV_OTP_Handler {
             set_transient('hkdev_verified_phone_' . md5($user_id), $phone_number, HOUR_IN_SECONDS);
         } elseif (function_exists('WC') && WC()->session) {
             WC()->session->set('hkdev_verified_phone', $phone_number);
-        } else {
-            $ip_address = $this->get_fallback_ip();
-            if (!empty($ip_address)) {
-                set_transient('hkdev_verified_phone_guest_' . md5($ip_address), $phone_number, HOUR_IN_SECONDS);
-            }
         }
 
         return array(
@@ -150,12 +151,6 @@ class HKDEV_OTP_Handler {
             return $verified === $phone_number;
         }
 
-        $ip_address = $this->get_fallback_ip();
-        if (!empty($ip_address)) {
-            $verified = get_transient('hkdev_verified_phone_guest_' . md5($ip_address));
-            return $verified === $phone_number;
-        }
-
         return false;
     }
 
@@ -172,13 +167,4 @@ class HKDEV_OTP_Handler {
         return preg_replace('/[^0-9+]/', '', $phone_number);
     }
 
-    private function get_fallback_ip() {
-        if (!empty($_SERVER['REMOTE_ADDR'])) {
-            $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR']));
-            if (filter_var($ip, FILTER_VALIDATE_IP)) {
-                return $ip;
-            }
-        }
-        return '';
-    }
 }

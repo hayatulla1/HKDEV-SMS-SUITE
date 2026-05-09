@@ -108,7 +108,7 @@ class HKDEV_WC_Order_Delay_Blocker {
         // Calculate block duration in seconds
         $duration_seconds = $this->calculate_block_duration();
 
-        $combined_block = get_option(self::OPTION_COMBINED_BLOCK, 'off') === 'on';
+        $combined_block = hkdev_option_is_enabled(self::OPTION_COMBINED_BLOCK, 'off');
 
         if (!empty($billing_phone)) {
             $phone_key = $this->block_transient_prefix . 'phone_' . md5($billing_phone);
