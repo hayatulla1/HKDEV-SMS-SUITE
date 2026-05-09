@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputContainer = document.getElementById('hkdev-otp-inputs');
     const btnVerify = document.getElementById('hkdev-btn-verify');
     const btnText = document.getElementById('hkdev-btn-verify-text');
+    const defaultVerifyText = btnText ? btnText.textContent.trim() : 'Verify & Continue Order';
     const errorBox = document.getElementById('hkdev-modal-error');
     const phoneInput = document.getElementById('hkdev-phone-input');
 
@@ -24,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorBox.style.display = 'none';
         pendingCheckoutForm = null;
         btnVerify.classList.remove('success');
-        btnText.innerHTML = 'Verify & Continue Order';
+        btnText.innerHTML = defaultVerifyText;
     }
 
     // Generate OTP input boxes
@@ -81,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         pendingCheckoutForm = formElement || pendingCheckoutForm;
         phoneInput.value = phone;
-        resetForm();
+        resetForm(false);
         overlay.classList.add('active');
         setTimeout(() => inputs[0].focus(), 100);
 
@@ -263,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (normalizePhone(latestPhone) !== normalizePhone(phone)) {
                     showError('Phone number changed. Please verify again.');
                     btnVerify.disabled = false;
-                    btnText.innerHTML = 'Verify & Continue Order';
+                    btnText.innerHTML = defaultVerifyText;
                     resetForm();
                     return;
                 }
@@ -287,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 showError(res.data || 'Invalid OTP. Please try again.');
                 btnVerify.disabled = false;
-                btnText.innerHTML = 'Verify & Continue Order';
+                btnText.innerHTML = defaultVerifyText;
                 resetForm();
             }
         });
