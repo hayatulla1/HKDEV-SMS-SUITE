@@ -324,7 +324,7 @@ class HKDEV_SMS_Pro {
 
         if (empty($phone)) {
             wc_add_notice(
-                __('Please enter your billing phone number and verify OTP before checkout.', HKDEV_TEXT_DOMAIN),
+                __('A valid phone number is required for OTP verification before checkout.', HKDEV_TEXT_DOMAIN),
                 'error'
             );
             return;

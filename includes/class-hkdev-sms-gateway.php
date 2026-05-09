@@ -15,6 +15,7 @@ class HKDEV_SMS_Gateway {
     private $param_sender;
     private $param_number;
     private $param_msg;
+    private $balance_keyword_pattern;
 
     public function __construct() {
         $this->gateway_url = get_option('sib_gateway_url', '');
@@ -25,6 +26,7 @@ class HKDEV_SMS_Gateway {
         $this->param_sender = get_option('sib_param_sender', 'sender');
         $this->param_number = get_option('sib_param_number', 'number');
         $this->param_msg = get_option('sib_param_msg', 'message');
+        $this->balance_keyword_pattern = implode('|', array_map('preg_quote', self::BALANCE_FALLBACK_KEYS));
     }
 
     public function is_configured() {
@@ -274,8 +276,7 @@ class HKDEV_SMS_Gateway {
             return $normalized;
         }
 
-        $keyword_pattern = implode('|', array_map('preg_quote', self::BALANCE_FALLBACK_KEYS));
-        if (preg_match('/(?:' . $keyword_pattern . ')\s*[:=]?\s*([-+]?\d+(?:\.\d+)?)/i', $normalized, $matches)) {
+        if (preg_match('/(?:' . $this->balance_keyword_pattern . ')\s*[:=]?\s*([-+]?\d+(?:\.\d+)?)/i', $normalized, $matches)) {
             return $matches[1];
         }
 
