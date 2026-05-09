@@ -6,6 +6,8 @@ if (!defined('ABSPATH')) {
 
 class HKDEV_SMS_Pro {
     
+    private const MAX_CHECKOUT_POST_DATA_LENGTH = 20000;
+
     private $sms_gateway;
     private $otp_handler;
 
@@ -309,7 +311,7 @@ class HKDEV_SMS_Pro {
         if (empty($phone) && isset($_POST['post_data'])) {
             $post_data = array();
             $post_data_raw = wp_unslash($_POST['post_data']);
-            if (is_string($post_data_raw) && strlen($post_data_raw) <= 20000) {
+            if (is_string($post_data_raw) && strlen($post_data_raw) <= self::MAX_CHECKOUT_POST_DATA_LENGTH) {
                 parse_str($post_data_raw, $post_data);
                 if (!empty($post_data['billing_phone'])) {
                     $phone = sanitize_text_field($post_data['billing_phone']);

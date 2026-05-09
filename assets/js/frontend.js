@@ -6,9 +6,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputContainer = document.getElementById('hkdev-otp-inputs');
     const btnVerify = document.getElementById('hkdev-btn-verify');
     const btnText = document.getElementById('hkdev-btn-verify-text');
-    const defaultVerifyText = btnText ? btnText.textContent.trim() : 'Verify & Continue Order';
+    const defaultVerifyText = btnText ? btnText.textContent.trim() : '';
     const errorBox = document.getElementById('hkdev-modal-error');
     const phoneInput = document.getElementById('hkdev-phone-input');
+    const AUTO_CLOSE_DELAY_MS = 1500;
 
     // Config from wp_localize_script
     const OTP_LENGTH = window.hkdevFrontendAjax ? parseInt(hkdevFrontendAjax.otpLength) : 6;
@@ -25,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorBox.style.display = 'none';
         pendingCheckoutForm = null;
         btnVerify.classList.remove('success');
-        btnText.innerHTML = defaultVerifyText;
+        btnText.textContent = defaultVerifyText;
     }
 
     // Generate OTP input boxes
@@ -251,7 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         btnVerify.disabled = true;
-        btnText.innerHTML = 'Verifying...';
+        btnText.textContent = 'Verifying...';
 
         jQuery.post(hkdevFrontendAjax.ajaxUrl, {
             action: 'hkdev_verify_otp',
@@ -264,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (normalizePhone(latestPhone) !== normalizePhone(phone)) {
                     showError('Phone number changed. Please verify again.');
                     btnVerify.disabled = false;
-                    btnText.innerHTML = defaultVerifyText;
+                    btnText.textContent = defaultVerifyText;
                     resetForm();
                     return;
                 }
@@ -272,7 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 verifiedPhoneNumber = phone;
                 allowNextSubmission = true;
                 showSuccess('Phone verified successfully.');
-                btnText.innerHTML = '<i class="ph-bold ph-check"></i> Verified!';
+                btnText.textContent = 'Verified!';
                 btnVerify.classList.remove('active');
                 btnVerify.classList.add('success');
 
@@ -284,11 +285,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if ($targetForm.length) {
                         $targetForm.trigger('submit');
                     }
-                }, 1500);
+                }, AUTO_CLOSE_DELAY_MS);
             } else {
                 showError(res.data || 'Invalid OTP. Please try again.');
                 btnVerify.disabled = false;
-                btnText.innerHTML = defaultVerifyText;
+                btnText.textContent = defaultVerifyText;
                 resetForm();
             }
         });
