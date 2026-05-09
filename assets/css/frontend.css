@@ -51,7 +51,7 @@
     cursor: pointer;
     padding: 8px;
     border-radius: 50%;
-    display: flex;
+    display: none;
     transition: all 0.2s;
 }
 
@@ -99,6 +99,12 @@
     margin-bottom: 20px;
     text-align: center;
     border: 1px solid #fecaca;
+}
+
+.modal-error-alert.success {
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
 }
 
 #hkdev-otp-form {

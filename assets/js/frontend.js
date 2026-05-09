@@ -6,8 +6,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputContainer = document.getElementById('hkdev-otp-inputs');
     const btnVerify = document.getElementById('hkdev-btn-verify');
     const btnText = document.getElementById('hkdev-btn-verify-text');
+    const defaultVerifyText = btnText ? btnText.textContent.trim() : '';
     const errorBox = document.getElementById('hkdev-modal-error');
     const phoneInput = document.getElementById('hkdev-phone-input');
+    const AUTO_CLOSE_DELAY_MS = 1500;
+    const verifyingText = window.hkdevFrontendAjax && hkdevFrontendAjax.verifyingText ? hkdevFrontendAjax.verifyingText : 'Verifying...';
+    const verifiedText = window.hkdevFrontendAjax && hkdevFrontendAjax.verifiedText ? hkdevFrontendAjax.verifiedText : 'Verified!';
 
     // Config from wp_localize_script
     const OTP_LENGTH = window.hkdevFrontendAjax ? parseInt(hkdevFrontendAjax.otpLength) : 6;
@@ -16,6 +20,16 @@ document.addEventListener('DOMContentLoaded', function() {
     let verifiedPhoneNumber = '';
     let allowNextSubmission = false;
     let pendingCheckoutForm = null;
+
+    function closeModal() {
+        overlay.classList.remove('active');
+        clearInterval(timerInterval);
+        resetForm(false);
+        errorBox.style.display = 'none';
+        pendingCheckoutForm = null;
+        btnVerify.classList.remove('success');
+        btnText.textContent = defaultVerifyText;
+    }
 
     // Generate OTP input boxes
     for (let i = 0; i < OTP_LENGTH; i++) {
@@ -71,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         pendingCheckoutForm = formElement || pendingCheckoutForm;
         phoneInput.value = phone;
+        resetForm(false);
         overlay.classList.add('active');
         setTimeout(() => inputs[0].focus(), 100);
 
@@ -92,10 +107,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Close modal
     document.getElementById('hkdev-close-modal').addEventListener('click', function(e) {
         e.preventDefault();
-        overlay.classList.remove('active');
-        clearInterval(timerInterval);
-        resetForm();
-        pendingCheckoutForm = null;
+        closeModal();
+    });
+
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && overlay.classList.contains('active')) {
+            closeModal();
+        }
     });
 
     // Input handling
@@ -198,13 +222,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function showError(msg) {
+        errorBox.classList.remove('success');
         errorBox.textContent = msg;
         errorBox.style.display = 'block';
     }
 
-    function resetForm() {
+    function showSuccess(msg) {
+        errorBox.classList.add('success');
+        errorBox.textContent = msg;
+        errorBox.style.display = 'block';
+    }
+
+    function resetForm(shouldFocus = true) {
         inputs.forEach(input => input.value = '');
-        inputs[0].focus();
+        if (shouldFocus) {
+            inputs[0].focus();
+        }
+        errorBox.classList.remove('success');
         checkFormComplete();
     }
 
@@ -220,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         btnVerify.disabled = true;
-        btnText.innerHTML = 'Verifying...';
+        btnText.textContent = verifyingText;
 
         jQuery.post(hkdevFrontendAjax.ajaxUrl, {
             action: 'hkdev_verify_otp',
@@ -233,14 +267,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (normalizePhone(latestPhone) !== normalizePhone(phone)) {
                     showError('Phone number changed. Please verify again.');
                     btnVerify.disabled = false;
-                    btnText.innerHTML = 'Verify & Complete Order';
+                    btnText.textContent = defaultVerifyText;
                     resetForm();
                     return;
                 }
 
                 verifiedPhoneNumber = phone;
                 allowNextSubmission = true;
-                btnText.innerHTML = '<i class="ph-bold ph-check"></i> Verified!';
+                showSuccess('Phone verified successfully.');
+                btnText.textContent = verifiedText;
                 btnVerify.classList.remove('active');
                 btnVerify.classList.add('success');
 
@@ -252,11 +287,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if ($targetForm.length) {
                         $targetForm.trigger('submit');
                     }
-                }, 1000);
+                }, AUTO_CLOSE_DELAY_MS);
             } else {
                 showError(res.data || 'Invalid OTP. Please try again.');
                 btnVerify.disabled = false;
-                btnText.innerHTML = 'Verify & Complete Order';
+                btnText.textContent = defaultVerifyText;
                 resetForm();
             }
         });
@@ -309,7 +344,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Intercept checkout submit for WooCommerce and funnel checkout forms
-    jQuery(document).on('submit', 'form', function(e) {
+    jQuery(document).on('submit', 'form.checkout, form.woocommerce-checkout, form[name="checkout"], form.wcf-checkout-form', function(e) {
         if (interceptCheckoutSubmission(this, e)) {
             return false;
         }

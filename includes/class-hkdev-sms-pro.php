@@ -6,6 +6,9 @@ if (!defined('ABSPATH')) {
 
 class HKDEV_SMS_Pro {
     
+    // Bound checkout post_data size before parse_str to reduce abuse risk on checkout requests.
+    private const MAX_CHECKOUT_POST_DATA_LENGTH = 20000;
+
     private $sms_gateway;
     private $otp_handler;
 
@@ -114,7 +117,9 @@ class HKDEV_SMS_Pro {
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('hkdev_otp_nonce'),
             'otpLength' => get_option('hkdev_otp_length', 6),
-            'cooldown' => get_option('hkdev_otp_cooldown_seconds', 60)
+            'cooldown' => get_option('hkdev_otp_cooldown_seconds', 60),
+            'verifyingText' => __('Verifying...', HKDEV_TEXT_DOMAIN),
+            'verifiedText' => __('Verified!', HKDEV_TEXT_DOMAIN)
         ));
     }
 
@@ -304,7 +309,18 @@ class HKDEV_SMS_Pro {
             return;
         }
 
-        $phone = isset($_POST['billing_phone']) ? sanitize_text_field($_POST['billing_phone']) : '';
+        $phone = isset($_POST['billing_phone']) ? sanitize_text_field(wp_unslash($_POST['billing_phone'])) : '';
+
+        if (empty($phone) && isset($_POST['post_data'])) {
+            $post_data = array();
+            $post_data_raw = wp_unslash($_POST['post_data']);
+            if (is_string($post_data_raw) && strlen($post_data_raw) <= self::MAX_CHECKOUT_POST_DATA_LENGTH) {
+                parse_str($post_data_raw, $post_data);
+                if (!empty($post_data['billing_phone'])) {
+                    $phone = sanitize_text_field($post_data['billing_phone']);
+                }
+            }
+        }
 
         if (empty($phone)) {
             return;
