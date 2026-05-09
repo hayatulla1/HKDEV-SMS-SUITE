@@ -184,7 +184,7 @@ class HKDEV_OTP_Handler {
     }
 
     private function get_user_verification_key($user_id) {
-        return 'hkdev_verified_phone_' . hash_hmac('sha256', (string) $user_id, wp_salt());
+        return 'hkdev_verified_phone_' . hash_hmac('sha256', (string) $user_id, wp_salt('nonce'));
     }
 
 }
