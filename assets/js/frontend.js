@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let timerInterval;
     let otpVerifiedForCurrentPhone = false;
     let pendingCheckoutForm = null;
-    let isSubmittingAfterVerification = false;
 
     // Generate OTP input boxes
     for (let i = 0; i < OTP_LENGTH; i++) {
@@ -220,17 +219,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 setTimeout(() => {
                     overlay.classList.remove('active');
-                    isSubmittingAfterVerification = true;
                     const $targetForm = pendingCheckoutForm ? jQuery(pendingCheckoutForm) : jQuery('form.checkout, form.woocommerce-checkout').first();
                     pendingCheckoutForm = null;
 
                     if ($targetForm.length) {
                         $targetForm.trigger('submit');
                     }
-
-                    setTimeout(() => {
-                        isSubmittingAfterVerification = false;
-                    }, 1000);
                 }, 1000);
             } else {
                 showError(res.data || 'Invalid OTP. Please try again.');
@@ -242,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Reset local verification state if phone changes
-    jQuery(document).on('change input', 'input[name="billing_phone"]', function() {
+    jQuery(document).on('change', 'input[name="billing_phone"]', function() {
         otpVerifiedForCurrentPhone = false;
     });
 
@@ -256,7 +250,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Intercept checkout submit for WooCommerce and funnel checkout forms
     jQuery(document).on('submit', 'form', function(e) {
-        if (!shouldInterceptCheckoutSubmit(this) || otpVerifiedForCurrentPhone || isSubmittingAfterVerification) {
+        if (!shouldInterceptCheckoutSubmit(this)) {
+            return;
+        }
+
+        if (overlay.classList.contains('active')) {
+            e.preventDefault();
+            return false;
+        }
+
+        if (otpVerifiedForCurrentPhone) {
             return;
         }
 
@@ -269,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Intercept common place-order buttons used by checkout/funnel builders
     jQuery(document).on('click', '#place_order, [name="woocommerce_checkout_place_order"], .wcf-submit-checkout, .wcf-next-btn', function(e) {
         const $form = jQuery(this).closest('form');
-        if (!$form.length || !shouldInterceptCheckoutSubmit($form[0]) || otpVerifiedForCurrentPhone || isSubmittingAfterVerification) {
+        if (!$form.length || !shouldInterceptCheckoutSubmit($form[0]) || otpVerifiedForCurrentPhone) {
             return;
         }
 
@@ -278,13 +281,5 @@ document.addEventListener('DOMContentLoaded', function() {
         pendingCheckoutForm = $form[0];
         window.openHKDEVModal($form[0]);
         return false;
-    });
-
-    // Keep submission blocked while modal is open
-    jQuery(document).on('submit', 'form', function(e) {
-        if (overlay.classList.contains('active') && shouldInterceptCheckoutSubmit(this)) {
-            e.preventDefault();
-            return false;
-        }
     });
 });
