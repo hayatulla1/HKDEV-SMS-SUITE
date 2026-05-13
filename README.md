@@ -185,7 +185,7 @@ No custom database tables are created. All data is stored in WordPress options a
 
 For bugs, feature requests, or support:
 - WhatsApp: https://wa.me/8801781115586
-- Facebook: https://facebook.com/hayatulla.oop
+- Facebook: https://www.facebook.com/hayatulla.oop
 
 ## License
 
@@ -207,7 +207,7 @@ GPL v3 - See LICENSE file for details
 
 ## Contributors
 
-- **HKDEV** - https://facebook.com/hayatulla.oop
+- **HKDEV** - https://www.facebook.com/hayatulla.oop
 
 ---
 

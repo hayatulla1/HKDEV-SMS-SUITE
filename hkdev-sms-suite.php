@@ -4,7 +4,7 @@
  * Description: Professional SMS, OTP, Order Blocker & Free Delivery toolkit for WooCommerce
  * Version: 3.0.0
  * Author: HKDEV
- * Author URI: https://facebook.com/hayatulla.oop
+ * Author URI: https://www.facebook.com/hayatulla.oop
  * License: GPL v3
  * Text Domain: hkdev-sms-suite
  * Domain Path: /languages
