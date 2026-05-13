@@ -50,6 +50,7 @@ class HKDEV_WC_Order_Delay_Blocker {
             $post_data     = array();
             $post_data_raw = wp_unslash($_POST['post_data']);
             if (is_string($post_data_raw) && strlen($post_data_raw) <= self::MAX_POST_DATA_LENGTH) {
+                $post_data_raw = sanitize_text_field($post_data_raw);
                 parse_str($post_data_raw, $post_data);
                 if (!empty($post_data['billing_phone'])) {
                     $billing_phone = sanitize_text_field($post_data['billing_phone']);
