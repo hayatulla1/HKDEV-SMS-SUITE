@@ -7,6 +7,11 @@ $active_blocks = class_exists('HKDEV_WC_Order_Delay_Blocker')
     : array();
 $block_logs  = get_option('hkdev_block_logs', array());
 $fd_settings = get_option('hkdev_fd_settings', array());
+$otp_products = array();
+$otp_preset_template = apply_filters(
+    'hkdev_prebuilt_otp_template',
+    __('আপনার OTP হলো {OTP}. OTP ভেরিফাই করলে অর্ডার প্লেস হবে এবং থ্যাংক ইউ পেজে যাবে।', HKDEV_TEXT_DOMAIN)
+);
 $bal_amount  = $balance_cache['amount'] ?? 'N/A';
 $bal_display = is_numeric($bal_amount) ? '৳' . $bal_amount : $bal_amount;
 
@@ -24,6 +29,14 @@ if (!empty($fd_settings['categories'])) {
         $t = get_term(absint($cid), 'product_cat');
         if ($t && !is_wp_error($t)) $fd_categories[] = array('id' => absint($cid), 'name' => $t->name);
     }
+}
+
+$otp_target_setting = get_option('sib_target_products', '');
+$otp_target_raw = is_array($otp_target_setting) ? $otp_target_setting : explode(',', (string) $otp_target_setting);
+$otp_target_ids = array_unique(array_filter(array_map('absint', (array) $otp_target_raw)));
+foreach ($otp_target_ids as $pid) {
+    $p = wc_get_product($pid);
+    if ($p) $otp_products[] = array('id' => $pid, 'name' => $p->get_name());
 }
 
 $blocked_total = count($active_blocks);
@@ -101,7 +114,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
 
     <!-- General Settings Tab -->
     <div id="sms-tab-general" class="hkdev-tab-content active">
-      <form method="post" action="options.php">
+      <form method="post" action="options.php" id="hkdev-general-form">
         <?php settings_fields('hkdev_settings_general_group'); ?>
         <div class="hkdev-grid-2">
           <div class="hkdev-card">
@@ -150,15 +163,16 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
             </div>
           </div>
         </div>
-        <div class="submit-btn-row">
-          <?php submit_button('Save Settings', 'primary', 'submit', false, array('class'=>'hkdev-btn hkdev-btn--primary')); ?>
+        <div class="submit-btn-row" style="display:flex;gap:12px;align-items:center">
+          <button type="button" id="hkdev-save-general" class="hkdev-btn hkdev-btn--primary">Save Settings</button>
+          <span id="hkdev-save-general-msg" style="font-size:13px;color:#10b981;display:none"></span>
         </div>
       </form>
     </div>
 
     <!-- API Credentials Tab -->
     <div id="sms-tab-api" class="hkdev-tab-content">
-      <form method="post" action="options.php">
+      <form method="post" action="options.php" id="hkdev-api-form">
         <?php settings_fields('hkdev_settings_api_group'); ?>
         <div class="hkdev-grid-2">
           <div class="hkdev-card">
@@ -237,25 +251,39 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
           </div>
           <button type="button" id="hkdev-test-sms-btn" class="hkdev-btn hkdev-btn--primary">Send Test SMS</button>
         </div>
-        <div class="submit-btn-row">
-          <?php submit_button('Save Settings', 'primary', 'submit', false, array('class'=>'hkdev-btn hkdev-btn--primary')); ?>
+        <div class="submit-btn-row" style="display:flex;gap:12px;align-items:center">
+          <button type="button" id="hkdev-save-api" class="hkdev-btn hkdev-btn--primary">Save Settings</button>
+          <span id="hkdev-save-api-msg" style="font-size:13px;color:#10b981;display:none"></span>
         </div>
       </form>
     </div>
 
     <!-- SMS Templates Tab -->
     <div id="sms-tab-templates" class="hkdev-tab-content">
-      <form method="post" action="options.php">
+      <form method="post" action="options.php" id="hkdev-templates-form">
         <?php settings_fields('hkdev_settings_templates_group'); ?>
         <div class="hkdev-card">
           <div class="hkdev-card-header">
             <h3>Target Products for OTP</h3>
-            <p>Comma-separated product IDs. Leave empty to require OTP for all products.</p>
+            <p>Search and add products. Leave empty to require OTP for all products.</p>
           </div>
-          <div class="hkdev-field">
-            <label>Product IDs</label>
-            <input type="text" name="sib_target_products" value="<?php echo esc_attr(get_option('sib_target_products','')); ?>" placeholder="e.g. 12, 45, 89">
+          <label class="hkdev-field-label">Select Products</label>
+          <div class="hkdev-search-input-wrap">
+            <input type="text" id="hkdev-otp-product-search" placeholder="Search products..." class="hkdev-search-input" autocomplete="off">
+            <div id="hkdev-otp-product-results" class="hkdev-search-results" style="display:none"></div>
           </div>
+          <div id="hkdev-otp-product-tags" class="hkdev-tag-list">
+            <?php foreach ($otp_products as $p): ?>
+            <span class="hkdev-tag hkdev-otp-product-tag" data-id="<?php echo esc_attr($p['id']); ?>">
+              <?php echo esc_html($p['name']); ?>
+              <button type="button" class="hkdev-tag-remove">×</button>
+            </span>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <div class="hkdev-card">
+          <div class="hkdev-card-header"><h3>Prebuilt Template</h3><p>Insert a ready-made OTP flow message</p></div>
+          <button type="button" id="hkdev-use-prebuilt-otp" class="hkdev-btn hkdev-btn--ghost" data-template="<?php echo esc_attr($otp_preset_template); ?>">Use Prebuilt OTP Template</button>
         </div>
         <div class="hkdev-grid-2">
           <div class="hkdev-card">
@@ -277,8 +305,9 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
             </div>
           </div>
         </div>
-        <div class="submit-btn-row">
-          <?php submit_button('Save Templates', 'primary', 'submit', false, array('class'=>'hkdev-btn hkdev-btn--primary')); ?>
+        <div class="submit-btn-row" style="display:flex;gap:12px;align-items:center">
+          <button type="button" id="hkdev-save-templates" class="hkdev-btn hkdev-btn--primary">Save Templates</button>
+          <span id="hkdev-save-templates-msg" style="font-size:13px;color:#10b981;display:none"></span>
         </div>
       </form>
     </div>
@@ -340,7 +369,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
 
     <!-- Settings Tab -->
     <div id="blocker-tab-settings" class="hkdev-tab-content active">
-      <form method="post" action="options.php">
+      <form method="post" action="options.php" id="hkdev-blocker-form">
         <?php settings_fields('hkdev_settings_blocker_group'); ?>
         <div class="hkdev-card">
           <div class="hkdev-card-header"><h3>Block Duration</h3><p>How long to block after a completed order</p></div>
@@ -372,8 +401,9 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
             </label>
           </div>
         </div>
-        <div class="submit-btn-row">
-          <?php submit_button('Save Settings', 'primary', 'submit', false, array('class'=>'hkdev-btn hkdev-btn--primary')); ?>
+        <div class="submit-btn-row" style="display:flex;gap:12px;align-items:center">
+          <button type="button" id="hkdev-save-blocker" class="hkdev-btn hkdev-btn--primary">Save Settings</button>
+          <span id="hkdev-save-blocker-msg" style="font-size:13px;color:#10b981;display:none"></span>
         </div>
       </form>
     </div>
