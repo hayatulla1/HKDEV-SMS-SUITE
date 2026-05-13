@@ -184,8 +184,8 @@ No custom database tables are created. All data is stored in WordPress options a
 ## Support & Issues
 
 For bugs, feature requests, or support:
-- Visit: https://hkdev.com/support
-- Email: support@hkdev.com
+- WhatsApp: https://wa.me/8801781115586
+- Facebook: https://facebook.com/hayatulla.oop
 
 ## License
 
@@ -207,7 +207,7 @@ GPL v3 - See LICENSE file for details
 
 ## Contributors
 
-- **HKDEV** - https://hkdev.com
+- **HKDEV** - https://facebook.com/hayatulla.oop
 
 ---
 

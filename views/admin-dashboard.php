@@ -590,8 +590,8 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
             <h2 class="hkdev-author-name">HKDEV — Professional Solutions</h2>
             <p class="hkdev-author-desc">We build high-performance WordPress &amp; WooCommerce extensions focused on security and conversion optimization.</p>
             <div class="hkdev-author-links">
-              <a href="https://wa.me/8801712132191" target="_blank">Contact WhatsApp</a>
-              <a href="https://hkdev.com" target="_blank">Website</a>
+              <a href="https://wa.me/8801781115586" target="_blank">Contact WhatsApp</a>
+              <a href="https://facebook.com/hayatulla.oop" target="_blank">Facebook</a>
             </div>
           </div>
         </div>
