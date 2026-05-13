@@ -1,513 +1,660 @@
-<?php if (!defined('ABSPATH')) {
-    exit;
-} ?>
+<?php
+if (!defined('ABSPATH')) exit;
 
-<div class="hkdev-app-wrapper">
-    <!-- APP SIDEBAR -->
-    <aside class="app-sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-logo-icon"><i class="ph-bold ph-lightning"></i></div>
-            <div>
-                <div class="sidebar-title">HKDEV</div>
-                <div class="sidebar-subtitle">SMS SUITE <span class="version-badge">v<?php echo esc_html(HKDEV_PLUGIN_VERSION); ?></span></div>
-            </div>
-        </div>
+// Load additional data
+$active_blocks = class_exists('HKDEV_WC_Order_Delay_Blocker')
+    ? HKDEV_WC_Order_Delay_Blocker::get_active_blocks_static()
+    : array();
+$block_logs  = get_option('hkdev_block_logs', array());
+$fd_settings = get_option('hkdev_fd_settings', array());
+$bal_amount  = $balance_cache['amount'] ?? 'N/A';
+$bal_display = is_numeric($bal_amount) ? '৳' . $bal_amount : $bal_amount;
 
-        <div class="nav-section-title"><?php _e('Plugin Modules', HKDEV_TEXT_DOMAIN); ?></div>
-        <ul class="sidebar-nav">
-            <li class="active" id="nav-main">
-                <button onclick="switchAppView('main')">
-                    <i class="ph-fill ph-chat-circle-text"></i>
-                    <div class="nav-item-meta">
-                        <span><?php _e('SMS Suite', HKDEV_TEXT_DOMAIN); ?></span>
-                        <span class="nav-item-desc"><?php _e('Settings & Logs', HKDEV_TEXT_DOMAIN); ?></span>
-                    </div>
-                </button>
-            </li>
-            <li id="nav-blocker">
-                <button onclick="switchAppView('blocker')">
-                    <i class="ph-fill ph-shield-check"></i>
-                    <div class="nav-item-meta">
-                        <span><?php _e('Order Blocker', HKDEV_TEXT_DOMAIN); ?></span>
-                        <span class="nav-item-desc"><?php _e('Spam Protection', HKDEV_TEXT_DOMAIN); ?></span>
-                    </div>
-                </button>
-            </li>
-        </ul>
+// Preload existing FD product/category names
+$fd_products    = array();
+$fd_categories  = array();
+if (!empty($fd_settings['products'])) {
+    foreach ((array) $fd_settings['products'] as $pid) {
+        $p = wc_get_product(absint($pid));
+        if ($p) $fd_products[] = array('id' => absint($pid), 'name' => $p->get_name());
+    }
+}
+if (!empty($fd_settings['categories'])) {
+    foreach ((array) $fd_settings['categories'] as $cid) {
+        $t = get_term(absint($cid), 'product_cat');
+        if ($t && !is_wp_error($t)) $fd_categories[] = array('id' => absint($cid), 'name' => $t->name);
+    }
+}
 
-        <div class="sidebar-footer">
-            <div class="nav-section-title" style="margin: 0 0 12px 0;"><?php _e('Quick Info', HKDEV_TEXT_DOMAIN); ?></div>
-            <div class="quick-info">
-                <div class="info-row">
-                    <span><i class="ph ph-wallet"></i> <?php _e('Balance', HKDEV_TEXT_DOMAIN); ?></span>
-                    <?php
-                    $bal_amount = $balance_cache['amount'] ?? '';
-                    $bal_decoded = json_decode($bal_amount, true);
-                    $bal_is_json = (json_last_error() === JSON_ERROR_NONE && (is_array($bal_decoded) || is_object($bal_decoded)));
-                    if ($bal_is_json) {
-                        $bal_amount = __('Check Response Key', HKDEV_TEXT_DOMAIN);
-                    }
-                    ?>
-                    <?php if (empty($bal_amount)) : ?>
-                        <span class="info-val balance-na"><?php _e('Not Checked', HKDEV_TEXT_DOMAIN); ?></span>
-                    <?php elseif ($bal_amount === __('Check Response Key', HKDEV_TEXT_DOMAIN)) : ?>
-                        <span class="info-val balance-na"><?php echo esc_html($bal_amount); ?></span>
-                    <?php else : ?>
-                        <span class="info-val balance-amount" id="hkdev-sidebar-balance"><?php echo esc_html($bal_amount); ?></span>
-                    <?php endif; ?>
-                </div>
-                <div class="info-row">
-                    <span><i class="ph ph-check-circle"></i> <?php _e('Total Logs', HKDEV_TEXT_DOMAIN); ?></span>
-                    <span class="info-val"><?php echo esc_html(count($logs)); ?></span>
-                </div>
-            </div>
-            <div class="system-status">
-                <div class="status-dot"></div>
-                <div>
-                    <div style="color: var(--success); font-weight: 600; margin-bottom: 2px;"><?php _e('System Operational', HKDEV_TEXT_DOMAIN); ?></div>
-                    <div style="font-size: 10px;">WooCommerce &middot; WordPress Admin</div>
-                </div>
-            </div>
-        </div>
-    </aside>
+$blocked_total = count($active_blocks);
+$log_blocked   = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') === 'blocked'));
+$log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') === 'unblocked'));
+?>
+<div class="hkdev-suite-wrap">
 
-    <!-- MAIN APP CONTENT -->
-    <div class="app-content-area">
+<!-- ====== NAVBAR ====== -->
+<header class="hkdev-nb">
+  <div class="hkdev-nb-inner">
 
-        <!-- VIEW 1: MAIN SETTINGS -->
-        <main id="app-view-main" class="app-content view-container active">
-            <div class="page-header">
-                <div class="page-title-group">
-                    <h1><i class="ph-fill ph-chat-circle-text"></i> HKDEV SMS Suite <span class="badge badge-success"><?php _e('Active', HKDEV_TEXT_DOMAIN); ?></span></h1>
-                    <p class="page-desc"><?php _e('Professional SMS, OTP & order protection toolkit for WooCommerce.', HKDEV_TEXT_DOMAIN); ?></p>
-                </div>
-                <button class="btn btn-outline" id="btn-refresh-balance"><i class="ph ph-arrows-clockwise"></i> <?php _e('Refresh Balance', HKDEV_TEXT_DOMAIN); ?></button>
-            </div>
-
-            <div class="pill-tabs">
-                <button class="pill-tab active" onclick="switchTab(event, 'main', 'features')"><?php _e('General Settings', HKDEV_TEXT_DOMAIN); ?></button>
-                <button class="pill-tab" onclick="switchTab(event, 'main', 'settings')"><?php _e('API Credentials', HKDEV_TEXT_DOMAIN); ?></button>
-                <button class="pill-tab" onclick="switchTab(event, 'main', 'templates')"><?php _e('SMS Templates', HKDEV_TEXT_DOMAIN); ?></button>
-                <button class="pill-tab" onclick="switchTab(event, 'main', 'logs')"><?php _e('SMS Logs', HKDEV_TEXT_DOMAIN); ?></button>
-            </div>
-
-            <form method="post" action="options.php" id="hkdev-settings-form">
-                <?php settings_fields('hkdev_settings_group'); ?>
-
-                <!-- TAB: GENERAL SETTINGS -->
-                <div id="main-tab-features" class="tab-content active">
-                    <div class="card">
-                        <h3><?php _e('OTP & Gateway Options', HKDEV_TEXT_DOMAIN); ?></h3>
-                        <p class="card-desc"><?php _e('Configure core SMS gateway and verification behavior.', HKDEV_TEXT_DOMAIN); ?></p>
-
-                        <div class="settings-list">
-                            <div class="settings-row">
-                                <div class="settings-meta">
-                                    <strong><?php _e('Enable WooCommerce OTP', HKDEV_TEXT_DOMAIN); ?></strong>
-                                    <p><?php _e('Require customers to verify their phone number at checkout.', HKDEV_TEXT_DOMAIN); ?></p>
-                                </div>
-                                <label class="switch switch-dark">
-                                    <input type="checkbox" name="hkdev_enable_otp" value="yes" <?php checked(hkdev_option_is_enabled('hkdev_enable_otp', 'yes'), true); ?>>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-meta">
-                                    <strong><?php _e('Enable SMS Gateway', HKDEV_TEXT_DOMAIN); ?></strong>
-                                    <p><?php _e('Master toggle — turn off to pause all outgoing messages instantly.', HKDEV_TEXT_DOMAIN); ?></p>
-                                </div>
-                                <label class="switch switch-dark">
-                                    <input type="checkbox" name="hkdev_enable_gateway" value="yes" <?php checked(hkdev_option_is_enabled('hkdev_enable_gateway', 'yes'), true); ?>>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-meta">
-                                    <strong><?php _e('Enable Order Confirmation SMS', HKDEV_TEXT_DOMAIN); ?></strong>
-                                    <p><?php _e('Send SMS to customers after successful order placement.', HKDEV_TEXT_DOMAIN); ?></p>
-                                </div>
-                                <label class="switch switch-dark">
-                                    <input type="checkbox" name="hkdev_enable_order_confirmation_sms" value="yes" <?php checked(hkdev_option_is_enabled('hkdev_enable_order_confirmation_sms', 'yes'), true); ?>>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-meta">
-                                    <strong><?php _e('Enable Status Update SMS', HKDEV_TEXT_DOMAIN); ?></strong>
-                                    <p><?php _e('Notify customers when their order status changes.', HKDEV_TEXT_DOMAIN); ?></p>
-                                </div>
-                                <label class="switch switch-dark">
-                                    <input type="checkbox" name="hkdev_enable_status_sms" value="yes" <?php checked(hkdev_option_is_enabled('hkdev_enable_status_sms', 'yes'), true); ?>>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-meta">
-                                    <strong><?php _e('Enable Activity Logging', HKDEV_TEXT_DOMAIN); ?></strong>
-                                    <p><?php _e('Keep detailed logs of all SMS transactions for audit purposes.', HKDEV_TEXT_DOMAIN); ?></p>
-                                </div>
-                                <label class="switch switch-dark">
-                                    <input type="checkbox" name="hkdev_enable_logs" value="yes" <?php checked(hkdev_option_is_enabled('hkdev_enable_logs', 'yes'), true); ?>>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-meta">
-                                    <strong><?php _e('OTP Length', HKDEV_TEXT_DOMAIN); ?></strong>
-                                    <p><?php _e('Number of digits for the one-time password.', HKDEV_TEXT_DOMAIN); ?></p>
-                                </div>
-                                <select name="hkdev_otp_length" class="form-control" style="width: 140px;">
-                                    <?php $len = get_option('hkdev_otp_length', 6); ?>
-                                    <option value="4" <?php selected($len, 4); ?>>4 <?php _e('Digits', HKDEV_TEXT_DOMAIN); ?></option>
-                                    <option value="5" <?php selected($len, 5); ?>>5 <?php _e('Digits', HKDEV_TEXT_DOMAIN); ?></option>
-                                    <option value="6" <?php selected($len, 6); ?>>6 <?php _e('Digits', HKDEV_TEXT_DOMAIN); ?></option>
-                                    <option value="8" <?php selected($len, 8); ?>>8 <?php _e('Digits', HKDEV_TEXT_DOMAIN); ?></option>
-                                </select>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-meta">
-                                    <strong><?php _e('OTP Expiry Time', HKDEV_TEXT_DOMAIN); ?></strong>
-                                    <p><?php _e('Minutes until OTP expires (default: 10 minutes).', HKDEV_TEXT_DOMAIN); ?></p>
-                                </div>
-                                <input type="number" name="hkdev_otp_expiry_minutes" class="form-control" value="<?php echo esc_attr(get_option('hkdev_otp_expiry_minutes', 10)); ?>" style="width: 140px;">
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-meta">
-                                    <strong><?php _e('OTP Cooldown', HKDEV_TEXT_DOMAIN); ?></strong>
-                                    <p><?php _e('Seconds to wait before requesting a new OTP.', HKDEV_TEXT_DOMAIN); ?></p>
-                                </div>
-                                <input type="number" name="hkdev_otp_cooldown_seconds" class="form-control" value="<?php echo esc_attr(get_option('hkdev_otp_cooldown_seconds', 60)); ?>" style="width: 140px;">
-                            </div>
-                        </div>
-                        <div style="margin-top: 32px;">
-                            <?php submit_button(__('Save Changes', HKDEV_TEXT_DOMAIN), 'primary btn', 'submit', false); ?>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB: API CREDENTIALS -->
-                <div id="main-tab-settings" class="tab-content">
-                    <div class="card">
-                        <h3><?php _e('SMS Gateway Configuration', HKDEV_TEXT_DOMAIN); ?></h3>
-                        <p class="card-desc"><?php _e('Enter your SMS gateway API credentials and endpoint details.', HKDEV_TEXT_DOMAIN); ?></p>
-
-                        <div class="form-group">
-                            <label><?php _e('Gateway API URL', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="url" name="sib_gateway_url" class="form-control" value="<?php echo esc_attr(get_option('sib_gateway_url', '')); ?>" placeholder="https://api.smsprovider.com/send">
-                        </div>
-
-                        <div class="form-group">
-                            <label><?php _e('API Token / Key', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="password" name="sib_api_token" class="form-control" value="<?php echo esc_attr(get_option('sib_api_token', '')); ?>" placeholder="Your API token">
-                        </div>
-
-                        <div class="form-group">
-                            <label><?php _e('Sender ID / Name', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="text" name="sib_sender_id" class="form-control" value="<?php echo esc_attr(get_option('sib_sender_id', '')); ?>" placeholder="Your business name">
-                        </div>
-
-                        <div class="form-group">
-                            <label><?php _e('HTTP Method', HKDEV_TEXT_DOMAIN); ?></label>
-                            <select name="sib_http_method" class="form-control">
-                                <option value="GET" <?php selected(get_option('sib_http_method', 'GET'), 'GET'); ?>>GET</option>
-                                <option value="POST" <?php selected(get_option('sib_http_method', 'GET'), 'POST'); ?>>POST</option>
-                            </select>
-                        </div>
-
-                        <h4><?php _e('Request Parameters', HKDEV_TEXT_DOMAIN); ?></h4>
-                        <div class="form-group">
-                            <label><?php _e('Token Parameter Name', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="text" name="sib_param_token" class="form-control" value="<?php echo esc_attr(get_option('sib_param_token', 'token')); ?>" placeholder="token">
-                        </div>
-
-                        <div class="form-group">
-                            <label><?php _e('Sender Parameter Name', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="text" name="sib_param_sender" class="form-control" value="<?php echo esc_attr(get_option('sib_param_sender', 'sender')); ?>" placeholder="sender">
-                        </div>
-
-                        <div class="form-group">
-                            <label><?php _e('Phone Parameter Name', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="text" name="sib_param_number" class="form-control" value="<?php echo esc_attr(get_option('sib_param_number', 'number')); ?>" placeholder="number">
-                        </div>
-
-                        <div class="form-group">
-                            <label><?php _e('Message Parameter Name', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="text" name="sib_param_msg" class="form-control" value="<?php echo esc_attr(get_option('sib_param_msg', 'message')); ?>" placeholder="message">
-                        </div>
-
-                        <h4><?php _e('Balance Check API', HKDEV_TEXT_DOMAIN); ?></h4>
-                        <div class="form-group">
-                            <label><?php _e('Balance API URL', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="url" name="hkdev_balance_api_url" class="form-control" value="<?php echo esc_attr(get_option('hkdev_balance_api_url', '')); ?>" placeholder="https://api.smsprovider.com/balance">
-                        </div>
-
-                        <div class="form-group">
-                            <label><?php _e('Balance Response Key', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="text" name="hkdev_balance_response_key" class="form-control" value="<?php echo esc_attr(get_option('hkdev_balance_response_key', 'balance')); ?>" placeholder="balance">
-                        </div>
-
-                        <div style="margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap;">
-                            <?php submit_button(__('Save Credentials', HKDEV_TEXT_DOMAIN), 'primary btn', 'submit', false); ?>
-                            <button type="button" class="btn btn-outline" id="btn-test-sms" onclick="testSMS()"><i class="ph ph-paper-plane-tilt"></i> <?php _e('Test SMS', HKDEV_TEXT_DOMAIN); ?></button>
-                        </div>
-
-                        <div class="test-sms-panel" id="hkdev-test-sms-panel">
-                            <h4><i class="ph ph-paper-plane-tilt"></i> <?php _e('Send a Test SMS', HKDEV_TEXT_DOMAIN); ?></h4>
-                            <div class="test-sms-row">
-                                <div class="form-group">
-                                    <label><?php _e('Phone Number', HKDEV_TEXT_DOMAIN); ?></label>
-                                    <input type="text" id="test-sms-phone" class="form-control" placeholder="01XXXXXXXXX">
-                                </div>
-                                <div class="form-group">
-                                    <label><?php _e('Message', HKDEV_TEXT_DOMAIN); ?></label>
-                                    <input type="text" id="test-sms-message" class="form-control" placeholder="<?php esc_attr_e('Test SMS from HKDEV SMS Suite', HKDEV_TEXT_DOMAIN); ?>" value="<?php esc_attr_e('Test SMS from HKDEV SMS Suite', HKDEV_TEXT_DOMAIN); ?>">
-                                </div>
-                                <button type="button" class="btn btn-primary" id="btn-send-test-sms" style="flex-shrink:0;">
-                                    <i class="ph-bold ph-paper-plane-right"></i> <?php _e('Send', HKDEV_TEXT_DOMAIN); ?>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB: SMS TEMPLATES -->
-                <div id="main-tab-templates" class="tab-content">
-                    <div class="card">
-                        <h3><?php _e('Customizable SMS Templates', HKDEV_TEXT_DOMAIN); ?></h3>
-                        <p class="card-desc"><?php _e('Create SMS message templates with dynamic placeholders.', HKDEV_TEXT_DOMAIN); ?></p>
-
-                        <div class="form-group">
-                            <label><?php _e('OTP Message Template', HKDEV_TEXT_DOMAIN); ?></label>
-                            <textarea name="sib_otp_template" class="form-control" rows="4" placeholder="Your OTP is: {OTP}"><?php echo esc_textarea(get_option('sib_otp_template', 'Your OTP is: {OTP}')); ?></textarea>
-                            <small><?php _e('Use {OTP} for the generated code', HKDEV_TEXT_DOMAIN); ?></small>
-                        </div>
-
-                        <div class="form-group">
-                            <label><?php _e('Order Confirmation Template', HKDEV_TEXT_DOMAIN); ?></label>
-                            <textarea name="sib_order_template" class="form-control" rows="4" placeholder="Thank you! Order ID: {ORDER_ID}"><?php echo esc_textarea(get_option('sib_order_template', 'Thank you for your order! Order ID: {ORDER_ID}')); ?></textarea>
-                            <small><?php _e('Use {ORDER_ID}, {CUSTOMER_NAME}, {ORDER_TOTAL}', HKDEV_TEXT_DOMAIN); ?></small>
-                        </div>
-
-                        <div class="form-group">
-                            <label><?php _e('Status Update Template', HKDEV_TEXT_DOMAIN); ?></label>
-                            <textarea name="sib_status_template" class="form-control" rows="4" placeholder="Your order status: {STATUS}"><?php echo esc_textarea(get_option('sib_status_template', 'Your order status has been updated to: {STATUS}')); ?></textarea>
-                            <small><?php _e('Use {STATUS} for order status', HKDEV_TEXT_DOMAIN); ?></small>
-                        </div>
-
-                        <div class="form-group">
-                            <label><?php _e('Target Products for OTP', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="text" name="sib_target_products" class="form-control" value="<?php echo esc_attr(get_option('sib_target_products', '')); ?>" placeholder="123,456,789">
-                            <small><?php _e('Comma-separated product or variation IDs. OTP is applied only when these items are in cart. Leave empty to require OTP for all checkout products.', HKDEV_TEXT_DOMAIN); ?></small>
-                        </div>
-
-                        <div style="margin-top: 24px;">
-                            <?php submit_button(__('Save Templates', HKDEV_TEXT_DOMAIN), 'primary btn', 'submit', false); ?>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB: SMS LOGS -->
-                <div id="main-tab-logs" class="tab-content">
-                    <div class="card">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <div>
-                                <h3><?php _e('SMS Activity Log', HKDEV_TEXT_DOMAIN); ?></h3>
-                                <p class="card-desc"><?php _e('All sent and failed SMS messages are logged here.', HKDEV_TEXT_DOMAIN); ?></p>
-                            </div>
-                            <button type="button" class="btn btn-outline" id="btn-clear-logs" onclick="clearLogs()"><?php _e('Clear Logs', HKDEV_TEXT_DOMAIN); ?></button>
-                        </div>
-
-                        <div style="overflow-x: auto;">
-                            <table class="logs-table">
-                                <thead>
-                                    <tr>
-                                        <th><?php _e('Status', HKDEV_TEXT_DOMAIN); ?></th>
-                                        <th><?php _e('Message', HKDEV_TEXT_DOMAIN); ?></th>
-                                        <th><?php _e('Timestamp', HKDEV_TEXT_DOMAIN); ?></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($logs)) : ?>
-                                        <?php foreach (array_slice($logs, 0, 50) as $log) : ?>
-                                            <tr>
-                                                <td>
-                                                    <span class="status-badge status-<?php echo esc_attr($log['status'] ?? 'unknown'); ?>">
-                                                        <?php echo esc_html(ucfirst($log['status'] ?? 'unknown')); ?>
-                                                    </span>
-                                                </td>
-                                                <td><?php echo esc_html($log['message'] ?? ''); ?></td>
-                                                <td><?php echo esc_html($log['timestamp'] ?? ''); ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else : ?>
-                                        <tr>
-                                            <td colspan="3" style="text-align: center; padding: 20px; color: var(--text-muted);">
-                                                <?php _e('No logs found yet', HKDEV_TEXT_DOMAIN); ?>
-                                            </td>
-                                        </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </main>
-
-        <!-- VIEW 2: ORDER BLOCKER -->
-        <main id="app-view-blocker" class="app-content view-container">
-            <div class="page-header">
-                <div class="page-title-group">
-                    <h1>
-                        <div class="icon-box" style="background:#ea580c; color:white; width:36px; height:36px; border-radius:10px;">
-                            <i class="ph-fill ph-shield-warning"></i>
-                        </div>
-                        <?php _e('Order Delay Blocker', HKDEV_TEXT_DOMAIN); ?>
-                        <span class="badge badge-warning"><?php _e('Anti-Spam', HKDEV_TEXT_DOMAIN); ?></span>
-                    </h1>
-                    <p class="page-desc"><?php _e('Prevent duplicate orders and spam by temporarily blocking IPs and phone numbers.', HKDEV_TEXT_DOMAIN); ?></p>
-                </div>
-            </div>
-
-            <form method="post" action="options.php">
-                <?php settings_fields('hkdev_settings_group'); ?>
-                <div class="card">
-                    <h3><?php _e('Block Duration Settings', HKDEV_TEXT_DOMAIN); ?></h3>
-                    <p class="card-desc"><?php _e('Configure how long an IP or phone should be blocked after an order.', HKDEV_TEXT_DOMAIN); ?></p>
-
-                    <div class="duration-grid">
-                        <div class="duration-box">
-                            <label><?php _e('Days', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="number" name="usp_wcodb_block_duration_days" value="<?php echo esc_attr(get_option('usp_wcodb_block_duration_days', 0)); ?>" min="0">
-                        </div>
-                        <div class="duration-box">
-                            <label><?php _e('Hours', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="number" name="usp_wcodb_block_duration_hours" value="<?php echo esc_attr(get_option('usp_wcodb_block_duration_hours', 0)); ?>" min="0">
-                        </div>
-                        <div class="duration-box">
-                            <label><?php _e('Minutes', HKDEV_TEXT_DOMAIN); ?></label>
-                            <input type="number" name="usp_wcodb_block_duration_minutes" value="<?php echo esc_attr(get_option('usp_wcodb_block_duration_minutes', 60)); ?>" min="1">
-                        </div>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 24px;">
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="usp_wcodb_combined_block_enabled" value="on" <?php checked(get_option('usp_wcodb_combined_block_enabled', 'off'), 'on'); ?>>
-                            <span><?php _e('Enable Combined IP + Phone Blocking', HKDEV_TEXT_DOMAIN); ?></span>
-                        </label>
-                        <p style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">
-                            <?php _e('Block both IP address and phone number for the same duration when one triggers a block.', HKDEV_TEXT_DOMAIN); ?>
-                        </p>
-                    </div>
-
-                    <div style="margin-top: 32px;">
-                        <?php submit_button(__('Save Blocker Settings', HKDEV_TEXT_DOMAIN), 'primary btn btn-warning', 'submit', false); ?>
-                    </div>
-                </div>
-            </form>
-        </main>
-
+    <div class="hkdev-nb-logo">
+      <div class="hkdev-nb-logo-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <div>
+        <span class="hkdev-nb-brand">HKDEV</span>
+        <span class="hkdev-nb-suite">SUITE</span>
+        <span class="hkdev-nb-ver">v3.0</span>
+      </div>
     </div>
+
+    <nav class="hkdev-nb-nav">
+      <button class="hkdev-nb-btn hkdev-nb-btn--indigo active" data-view="sms" onclick="hkSwitchView('sms')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        SMS Suite
+      </button>
+      <button class="hkdev-nb-btn hkdev-nb-btn--orange" data-view="blocker" onclick="hkSwitchView('blocker')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Order Blocker
+      </button>
+      <button class="hkdev-nb-btn hkdev-nb-btn--emerald" data-view="delivery" onclick="hkSwitchView('delivery')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        Free Delivery
+      </button>
+    </nav>
+
+    <div class="hkdev-nb-right">
+      <div class="hkdev-chip">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+        <span style="color:#94a3b8">Balance:</span>
+        <span id="hkdev-balance-display" style="color:#34d399;font-weight:600"><?php echo esc_html($bal_display); ?></span>
+      </div>
+      <div class="hkdev-chip" style="border-color:rgba(99,102,241,.25);background:rgba(99,102,241,.08)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span style="color:#94a3b8">Logs:</span>
+        <span id="hkdev-log-count" style="color:#818cf8;font-weight:600"><?php echo count($logs); ?></span>
+      </div>
+      <div class="hkdev-nb-divider"></div>
+      <div class="hkdev-chip" style="background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.2)">
+        <span class="hkdev-dot"></span>
+        <span style="color:#34d399;font-weight:500">Operational</span>
+      </div>
+      <button class="hkdev-btn-otp" id="hkdev-preview-otp">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Preview OTP
+      </button>
+    </div>
+
+  </div>
+</header>
+
+<!-- ====== CONTENT ====== -->
+<div class="hkdev-content">
+
+  <!-- ==================== SMS SUITE VIEW ==================== -->
+  <div id="hkdev-view-sms" class="hkdev-view active">
+    <div class="hkdev-tabs">
+      <button class="hkdev-tab-btn active" data-tab="general" onclick="hkSwitchTab('sms','general')">General Settings</button>
+      <button class="hkdev-tab-btn" data-tab="api" onclick="hkSwitchTab('sms','api')">API Credentials</button>
+      <button class="hkdev-tab-btn" data-tab="templates" onclick="hkSwitchTab('sms','templates')">SMS Templates</button>
+      <button class="hkdev-tab-btn" data-tab="logs" onclick="hkSwitchTab('sms','logs')">SMS Logs <span class="hkdev-tab-badge"><?php echo count($logs); ?></span></button>
+    </div>
+
+    <!-- General Settings Tab -->
+    <div id="sms-tab-general" class="hkdev-tab-content active">
+      <form method="post" action="options.php">
+        <?php settings_fields('hkdev_settings_group'); ?>
+        <div class="hkdev-grid-2">
+          <div class="hkdev-card">
+            <div class="hkdev-card-header">
+              <h3>Feature Toggles</h3>
+              <p>Enable or disable each module</p>
+            </div>
+            <?php
+            $toggles = array(
+              array('name'=>'hkdev_enable_gateway','label'=>'SMS Gateway','desc'=>'Send SMS via your configured gateway'),
+              array('name'=>'hkdev_enable_otp','label'=>'OTP Verification','desc'=>'Require phone OTP before checkout'),
+              array('name'=>'hkdev_enable_order_confirmation_sms','label'=>'Order Confirmation SMS','desc'=>'Send SMS when order is placed'),
+              array('name'=>'hkdev_enable_status_sms','label'=>'Status Update SMS','desc'=>'Notify customer on order status change'),
+              array('name'=>'hkdev_enable_logs','label'=>'SMS Logging','desc'=>'Keep a log of all sent messages'),
+              array('name'=>'hkdev_enable_order_blocker','label'=>'Order Blocker','desc'=>'Block repeated orders from same phone/IP'),
+            );
+            foreach ($toggles as $t): $checked = hkdev_option_is_enabled($t['name'], 'yes'); ?>
+            <div class="hkdev-toggle-row">
+              <div class="hkdev-toggle-info">
+                <strong><?php echo esc_html($t['label']); ?></strong>
+                <span><?php echo esc_html($t['desc']); ?></span>
+              </div>
+              <label class="hkdev-toggle">
+                <input type="checkbox" name="<?php echo esc_attr($t['name']); ?>" value="yes" <?php checked($checked, true); ?>>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <?php endforeach; ?>
+          </div>
+          <div class="hkdev-card">
+            <div class="hkdev-card-header">
+              <h3>OTP Configuration</h3>
+              <p>Adjust OTP behaviour</p>
+            </div>
+            <div class="hkdev-field">
+              <label>OTP Length (digits)</label>
+              <input type="number" name="hkdev_otp_length" value="<?php echo esc_attr(get_option('hkdev_otp_length',6)); ?>" min="4" max="8">
+            </div>
+            <div class="hkdev-field">
+              <label>OTP Expiry (minutes)</label>
+              <input type="number" name="hkdev_otp_expiry_minutes" value="<?php echo esc_attr(get_option('hkdev_otp_expiry_minutes',10)); ?>" min="1">
+            </div>
+            <div class="hkdev-field">
+              <label>Resend Cooldown (seconds)</label>
+              <input type="number" name="hkdev_otp_cooldown_seconds" value="<?php echo esc_attr(get_option('hkdev_otp_cooldown_seconds',60)); ?>" min="10">
+            </div>
+          </div>
+        </div>
+        <div class="submit-btn-row">
+          <?php submit_button('Save Settings', 'primary', 'submit', false, array('class'=>'hkdev-btn hkdev-btn--primary')); ?>
+        </div>
+      </form>
+    </div>
+
+    <!-- API Credentials Tab -->
+    <div id="sms-tab-api" class="hkdev-tab-content">
+      <form method="post" action="options.php">
+        <?php settings_fields('hkdev_settings_group'); ?>
+        <div class="hkdev-grid-2">
+          <div class="hkdev-card">
+            <div class="hkdev-card-header"><h3>Gateway Settings</h3><p>Configure your SMS provider</p></div>
+            <div class="hkdev-field">
+              <label>Gateway URL</label>
+              <input type="url" name="sib_gateway_url" value="<?php echo esc_attr(get_option('sib_gateway_url','')); ?>" placeholder="https://sms.example.com/api/send">
+            </div>
+            <div class="hkdev-field">
+              <label>API Token</label>
+              <input type="text" name="sib_api_token" value="<?php echo esc_attr(get_option('sib_api_token','')); ?>" placeholder="Your API token">
+            </div>
+            <div class="hkdev-field">
+              <label>Sender ID</label>
+              <input type="text" name="sib_sender_id" value="<?php echo esc_attr(get_option('sib_sender_id','')); ?>" placeholder="e.g. HKDEV">
+            </div>
+            <div class="hkdev-field">
+              <label>HTTP Method</label>
+              <select name="sib_http_method">
+                <option value="GET"  <?php selected(get_option('sib_http_method','GET'),'GET'); ?>>GET</option>
+                <option value="POST" <?php selected(get_option('sib_http_method','GET'),'POST'); ?>>POST</option>
+              </select>
+            </div>
+          </div>
+          <div class="hkdev-card">
+            <div class="hkdev-card-header"><h3>Parameter Names</h3><p>Map your gateway's parameter keys</p></div>
+            <?php
+            $params = array(
+              array('name'=>'sib_param_token', 'label'=>'Token Parameter', 'default'=>'token'),
+              array('name'=>'sib_param_sender','label'=>'Sender Parameter','default'=>'sender'),
+              array('name'=>'sib_param_number','label'=>'Number Parameter','default'=>'number'),
+              array('name'=>'sib_param_msg',   'label'=>'Message Parameter','default'=>'message'),
+            );
+            foreach ($params as $p): ?>
+            <div class="hkdev-field">
+              <label><?php echo esc_html($p['label']); ?></label>
+              <input type="text" name="<?php echo esc_attr($p['name']); ?>" value="<?php echo esc_attr(get_option($p['name'],$p['default'])); ?>">
+            </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <div class="hkdev-card">
+          <div class="hkdev-card-header"><h3>Balance API</h3><p>Check your SMS credit balance</p></div>
+          <div class="hkdev-grid-2">
+            <div class="hkdev-field">
+              <label>Balance API URL</label>
+              <input type="url" name="hkdev_balance_api_url" value="<?php echo esc_attr(get_option('hkdev_balance_api_url','')); ?>" placeholder="https://sms.example.com/api/balance">
+            </div>
+            <div class="hkdev-field">
+              <label>Balance Response Key</label>
+              <input type="text" name="hkdev_balance_response_key" value="<?php echo esc_attr(get_option('hkdev_balance_response_key','balance')); ?>" placeholder="e.g. balance">
+            </div>
+          </div>
+          <div class="hkdev-balance-check-row">
+            <div>
+              <span class="hkdev-balance-label">Current Balance:</span>
+              <span id="hkdev-balance-value" class="hkdev-balance-value"><?php echo esc_html($bal_display); ?></span>
+              <?php if (!empty($balance_cache['checked_at'])): ?>
+              <span class="hkdev-balance-time"> — checked <?php echo esc_html($balance_cache['checked_at']); ?></span>
+              <?php endif; ?>
+            </div>
+            <button type="button" id="hkdev-check-balance" class="hkdev-btn hkdev-btn--ghost">Check Balance</button>
+          </div>
+        </div>
+        <div class="hkdev-card">
+          <div class="hkdev-card-header"><h3>Test SMS</h3><p>Send a test message to verify your setup</p></div>
+          <div class="hkdev-grid-2">
+            <div class="hkdev-field">
+              <label>Phone Number</label>
+              <input type="text" id="hkdev-test-phone" placeholder="01XXXXXXXXX">
+            </div>
+            <div class="hkdev-field">
+              <label>Message</label>
+              <input type="text" id="hkdev-test-message" value="Test SMS from HKDEV SMS Suite v3.0" placeholder="Your test message">
+            </div>
+          </div>
+          <button type="button" id="hkdev-test-sms-btn" class="hkdev-btn hkdev-btn--primary">Send Test SMS</button>
+        </div>
+        <div class="submit-btn-row">
+          <?php submit_button('Save Settings', 'primary', 'submit', false, array('class'=>'hkdev-btn hkdev-btn--primary')); ?>
+        </div>
+      </form>
+    </div>
+
+    <!-- SMS Templates Tab -->
+    <div id="sms-tab-templates" class="hkdev-tab-content">
+      <form method="post" action="options.php">
+        <?php settings_fields('hkdev_settings_group'); ?>
+        <div class="hkdev-card">
+          <div class="hkdev-card-header">
+            <h3>Target Products for OTP</h3>
+            <p>Comma-separated product IDs. Leave empty to require OTP for all products.</p>
+          </div>
+          <div class="hkdev-field">
+            <label>Product IDs</label>
+            <input type="text" name="sib_target_products" value="<?php echo esc_attr(get_option('sib_target_products','')); ?>" placeholder="e.g. 12, 45, 89">
+          </div>
+        </div>
+        <div class="hkdev-grid-2">
+          <div class="hkdev-card">
+            <div class="hkdev-card-header"><h3>OTP Template</h3><p>Variables: <code>{OTP}</code></p></div>
+            <div class="hkdev-field">
+              <textarea name="sib_otp_template" rows="4"><?php echo esc_textarea(get_option('sib_otp_template','Your OTP is: {OTP}. Valid for 10 minutes.')); ?></textarea>
+            </div>
+          </div>
+          <div class="hkdev-card">
+            <div class="hkdev-card-header"><h3>Order Confirmation Template</h3><p>Variables: <code>{ORDER_ID}</code> <code>{CUSTOMER_NAME}</code> <code>{ORDER_TOTAL}</code></p></div>
+            <div class="hkdev-field">
+              <textarea name="sib_order_template" rows="4"><?php echo esc_textarea(get_option('sib_order_template','Thank you {CUSTOMER_NAME}! Order #{ORDER_ID} confirmed. Total: {ORDER_TOTAL}')); ?></textarea>
+            </div>
+          </div>
+          <div class="hkdev-card">
+            <div class="hkdev-card-header"><h3>Status Update Template</h3><p>Variables: <code>{STATUS}</code></p></div>
+            <div class="hkdev-field">
+              <textarea name="sib_status_template" rows="4"><?php echo esc_textarea(get_option('sib_status_template','Your order status has been updated to: {STATUS}')); ?></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="submit-btn-row">
+          <?php submit_button('Save Templates', 'primary', 'submit', false, array('class'=>'hkdev-btn hkdev-btn--primary')); ?>
+        </div>
+      </form>
+    </div>
+
+    <!-- SMS Logs Tab -->
+    <div id="sms-tab-logs" class="hkdev-tab-content">
+      <?php
+      $total_sent = count(array_filter($logs, fn($l) => ($l['status'] ?? '') === 'success'));
+      $total_fail = count(array_filter($logs, fn($l) => ($l['status'] ?? '') === 'error'));
+      ?>
+      <div class="hkdev-stats-row">
+        <div class="hkdev-stat-card">
+          <div class="hkdev-stat-label">Total Logs</div>
+          <div class="hkdev-stat-value"><?php echo count($logs); ?></div>
+        </div>
+        <div class="hkdev-stat-card">
+          <div class="hkdev-stat-label">Sent Successfully</div>
+          <div class="hkdev-stat-value" style="color:#10b981"><?php echo $total_sent; ?></div>
+        </div>
+        <div class="hkdev-stat-card">
+          <div class="hkdev-stat-label">Failed</div>
+          <div class="hkdev-stat-value" style="color:#ef4444"><?php echo $total_fail; ?></div>
+        </div>
+      </div>
+      <div class="hkdev-card">
+        <div class="hkdev-card-header" style="display:flex;justify-content:space-between;align-items:center">
+          <div><h3>Log History</h3><p>Last 1000 SMS events</p></div>
+          <button type="button" id="hkdev-clear-sms-logs" class="hkdev-btn hkdev-btn--danger hkdev-btn--sm">Clear All Logs</button>
+        </div>
+        <div class="hkdev-table-wrap">
+          <table class="hkdev-table" id="hkdev-sms-log-table">
+            <thead><tr><th>#</th><th>Status</th><th>Message</th><th>Timestamp</th></tr></thead>
+            <tbody>
+            <?php if (empty($logs)): ?>
+              <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:32px">No logs found</td></tr>
+            <?php else: foreach (array_slice($logs, 0, 200) as $i => $log): ?>
+              <tr>
+                <td><?php echo $i+1; ?></td>
+                <td><span class="hkdev-badge hkdev-badge--<?php echo ($log['status'] ?? '') === 'success' ? 'success' : 'danger'; ?>"><?php echo esc_html($log['status'] ?? 'unknown'); ?></span></td>
+                <td><?php echo esc_html($log['message'] ?? ''); ?></td>
+                <td><?php echo esc_html($log['timestamp'] ?? ''); ?></td>
+              </tr>
+            <?php endforeach; endif; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- /sms view -->
+
+
+  <!-- ==================== ORDER BLOCKER VIEW ==================== -->
+  <div id="hkdev-view-blocker" class="hkdev-view">
+    <div class="hkdev-tabs">
+      <button class="hkdev-tab-btn active" data-tab="settings" onclick="hkSwitchTab('blocker','settings')">Settings</button>
+      <button class="hkdev-tab-btn" data-tab="blocked" onclick="hkSwitchTab('blocker','blocked')">Blocked Users <span class="hkdev-tab-badge"><?php echo $blocked_total; ?></span></button>
+      <button class="hkdev-tab-btn" data-tab="bloglog" onclick="hkSwitchTab('blocker','bloglog')">Activity Log <span class="hkdev-tab-badge"><?php echo count($block_logs); ?></span></button>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="blocker-tab-settings" class="hkdev-tab-content active">
+      <form method="post" action="options.php">
+        <?php settings_fields('hkdev_settings_group'); ?>
+        <div class="hkdev-card">
+          <div class="hkdev-card-header"><h3>Block Duration</h3><p>How long to block after a completed order</p></div>
+          <div class="hkdev-grid-3">
+            <div class="hkdev-field">
+              <label>Days</label>
+              <input type="number" name="usp_wcodb_block_duration_days" value="<?php echo esc_attr(get_option('usp_wcodb_block_duration_days',0)); ?>" min="0">
+            </div>
+            <div class="hkdev-field">
+              <label>Hours</label>
+              <input type="number" name="usp_wcodb_block_duration_hours" value="<?php echo esc_attr(get_option('usp_wcodb_block_duration_hours',0)); ?>" min="0" max="23">
+            </div>
+            <div class="hkdev-field">
+              <label>Minutes</label>
+              <input type="number" name="usp_wcodb_block_duration_minutes" value="<?php echo esc_attr(get_option('usp_wcodb_block_duration_minutes',60)); ?>" min="0" max="59">
+            </div>
+          </div>
+        </div>
+        <div class="hkdev-card">
+          <div class="hkdev-card-header"><h3>Block Options</h3></div>
+          <div class="hkdev-toggle-row">
+            <div class="hkdev-toggle-info">
+              <strong>Combined Block (Phone + IP)</strong>
+              <span>Block both the phone number and IP address when an order is completed</span>
+            </div>
+            <label class="hkdev-toggle hkdev-toggle--orange">
+              <input type="checkbox" name="usp_wcodb_combined_block_enabled" value="yes" <?php checked(hkdev_option_is_enabled('usp_wcodb_combined_block_enabled','off'), true); ?>>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="submit-btn-row">
+          <?php submit_button('Save Settings', 'primary', 'submit', false, array('class'=>'hkdev-btn hkdev-btn--primary')); ?>
+        </div>
+      </form>
+    </div>
+
+    <!-- Blocked Users Tab -->
+    <div id="blocker-tab-blocked" class="hkdev-tab-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <h3 style="margin:0;font-size:16px;color:#1e293b">Active Blocks</h3>
+          <p style="margin:4px 0 0;font-size:13px;color:#64748b"><?php echo $blocked_total; ?> user(s) currently blocked</p>
+        </div>
+        <?php if ($blocked_total > 0): ?>
+        <button id="hkdev-clear-all-blocks" class="hkdev-btn hkdev-btn--danger hkdev-btn--sm">Unblock All</button>
+        <?php endif; ?>
+      </div>
+
+      <div id="hkdev-blocked-list">
+        <?php if (empty($active_blocks)): ?>
+          <div style="text-align:center;padding:48px;color:#94a3b8;background:#fff;border-radius:12px;border:1px dashed #e2e8f0">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" style="margin-bottom:12px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <p style="margin:0;font-size:14px">No users currently blocked</p>
+          </div>
+        <?php else: foreach ($active_blocks as $block):
+          $initials = strtoupper(substr($block['name'] ?? 'U', 0, 1) . (strpos($block['name'] ?? '', ' ') !== false ? substr(strrchr($block['name'], ' '), 1, 1) : ''));
+          $device   = $block['device'] ?? 'desktop';
+        ?>
+        <div class="hkdev-blocked-item" id="block-<?php echo esc_attr($block['id']); ?>">
+          <div class="hkdev-blocked-header">
+            <div class="hkdev-blocked-avatar"><?php echo esc_html($initials ?: 'U'); ?></div>
+            <div>
+              <div class="hkdev-blocked-name"><?php echo esc_html($block['name'] ?: 'Unknown'); ?></div>
+              <div class="hkdev-blocked-phone"><?php echo esc_html($block['phone'] ?? ''); ?></div>
+            </div>
+            <div class="hkdev-blocked-badge">
+              <span class="hkdev-device-badge hkdev-device-badge--<?php echo esc_attr($device); ?>"><?php echo esc_html(ucfirst($device)); ?></span>
+              <span class="hkdev-badge hkdev-badge--danger" style="font-size:11px">Blocked</span>
+              <svg class="hkdev-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <div class="hkdev-blocked-details">
+            <div class="hkdev-details-grid">
+              <div class="hkdev-detail-item"><label>IP Address</label><span><?php echo esc_html($block['ip'] ?? 'N/A'); ?></span></div>
+              <div class="hkdev-detail-item"><label>Browser</label><span><?php echo esc_html($block['browser'] ?? 'Unknown'); ?></span></div>
+              <div class="hkdev-detail-item"><label>OS</label><span><?php echo esc_html($block['os'] ?? 'Unknown'); ?></span></div>
+              <div class="hkdev-detail-item"><label>Blocked At</label><span><?php echo esc_html($block['blocked_at'] ?? ''); ?></span></div>
+              <div class="hkdev-detail-item"><label>Expires At</label><span><?php echo esc_html($block['expires_at'] ?? ''); ?></span></div>
+              <div class="hkdev-detail-item"><label>Order ID</label><span>#<?php echo esc_html($block['order_id'] ?? 'N/A'); ?></span></div>
+            </div>
+            <div class="hkdev-detail-item" style="margin-top:10px"><label>User Agent</label><span style="font-size:11px;color:#64748b"><?php echo esc_html(substr($block['user_agent'] ?? '', 0, 120)); ?></span></div>
+            <div class="hkdev-unblock-btn">
+              <button class="hkdev-btn hkdev-btn--emerald hkdev-btn--sm hkdev-unblock-btn-action" data-id="<?php echo esc_attr($block['id']); ?>">
+                Unblock This User
+              </button>
+            </div>
+          </div>
+        </div>
+        <?php endforeach; endif; ?>
+      </div>
+    </div>
+
+    <!-- Activity Log Tab -->
+    <div id="blocker-tab-bloglog" class="hkdev-tab-content">
+      <div class="hkdev-stats-row">
+        <div class="hkdev-stat-card">
+          <div class="hkdev-stat-label">Total Events</div>
+          <div class="hkdev-stat-value"><?php echo count($block_logs); ?></div>
+        </div>
+        <div class="hkdev-stat-card">
+          <div class="hkdev-stat-label">Blocks</div>
+          <div class="hkdev-stat-value" style="color:#ef4444"><?php echo $log_blocked; ?></div>
+        </div>
+        <div class="hkdev-stat-card">
+          <div class="hkdev-stat-label">Unblocks</div>
+          <div class="hkdev-stat-value" style="color:#10b981"><?php echo $log_unblocked; ?></div>
+        </div>
+      </div>
+      <div class="hkdev-card">
+        <div class="hkdev-card-header" style="display:flex;justify-content:space-between;align-items:center">
+          <div><h3>Block Activity Log</h3><p>All block / unblock events</p></div>
+          <button id="hkdev-clear-block-logs" class="hkdev-btn hkdev-btn--danger hkdev-btn--sm">Clear All Logs</button>
+        </div>
+        <div class="hkdev-table-wrap">
+          <table class="hkdev-table" id="hkdev-block-log-table">
+            <thead><tr><th>Name</th><th>Phone</th><th>IP</th><th>Device</th><th>Event</th><th>Reason</th><th>Time</th></tr></thead>
+            <tbody>
+            <?php if (empty($block_logs)): ?>
+              <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:32px">No activity logs</td></tr>
+            <?php else: foreach (array_slice($block_logs, 0, 200) as $log): ?>
+              <tr>
+                <td><?php echo esc_html($log['name'] ?? '—'); ?></td>
+                <td><?php echo esc_html($log['phone'] ?? '—'); ?></td>
+                <td><?php echo esc_html($log['ip'] ?? '—'); ?></td>
+                <td><?php echo esc_html(ucfirst($log['device'] ?? '—')); ?></td>
+                <td>
+                  <?php $ev = $log['event'] ?? ''; ?>
+                  <span class="hkdev-badge hkdev-badge--<?php echo $ev === 'blocked' ? 'danger' : ($ev === 'unblocked' ? 'success' : 'warning'); ?>">
+                    <?php echo esc_html(ucfirst($ev)); ?>
+                  </span>
+                </td>
+                <td><?php echo esc_html($log['reason'] ?? '—'); ?></td>
+                <td style="white-space:nowrap"><?php echo esc_html($log['timestamp'] ?? '—'); ?></td>
+              </tr>
+            <?php endforeach; endif; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- /blocker view -->
+
+
+  <!-- ==================== FREE DELIVERY VIEW ==================== -->
+  <div id="hkdev-view-delivery" class="hkdev-view">
+    <div class="hkdev-tabs">
+      <button class="hkdev-tab-btn active" data-tab="config" onclick="hkSwitchTab('delivery','config')">Configuration</button>
+      <button class="hkdev-tab-btn" data-tab="support" onclick="hkSwitchTab('delivery','support')">Support</button>
+    </div>
+
+    <!-- Configuration Tab -->
+    <div id="delivery-tab-config" class="hkdev-tab-content active">
+      <div class="hkdev-grid-2">
+        <div class="hkdev-card">
+          <div class="hkdev-card-header"><h3>Delivery Triggers</h3><p>Select which methods will unlock free delivery</p></div>
+          <?php
+          $fd_triggers = array(
+            array('id'=>'hkdev-fd-enable-qty',     'name'=>'enable_qty',      'label'=>'Quantity Based',  'desc'=>'Unlock by total item count in cart'),
+            array('id'=>'hkdev-fd-enable-products','name'=>'enable_products', 'label'=>'Product Based',   'desc'=>'Specific products or per-product setting'),
+            array('id'=>'hkdev-fd-enable-cats',    'name'=>'enable_cats',     'label'=>'Category Based',  'desc'=>'Unlock if cart has items from specific categories'),
+          );
+          foreach ($fd_triggers as $tr): $on = !empty($fd_settings[$tr['name']]); ?>
+          <div class="hkdev-toggle-row">
+            <div class="hkdev-toggle-info">
+              <strong><?php echo esc_html($tr['label']); ?></strong>
+              <span><?php echo esc_html($tr['desc']); ?></span>
+            </div>
+            <label class="hkdev-toggle hkdev-toggle--emerald">
+              <input type="checkbox" id="<?php echo esc_attr($tr['id']); ?>" <?php checked($on, true); ?>>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <div class="hkdev-card">
+          <div class="hkdev-card-header"><h3>Configuration</h3><p>Fine-tune delivery settings</p></div>
+          <div class="hkdev-field">
+            <label>Free Delivery Label</label>
+            <input type="text" id="hkdev-fd-label" value="<?php echo esc_attr($fd_settings['label'] ?? 'Free Delivery'); ?>" placeholder="e.g. Standard Free Delivery">
+          </div>
+          <div class="hkdev-field">
+            <label>Quantity Threshold</label>
+            <input type="number" id="hkdev-fd-qty-threshold" value="<?php echo esc_attr($fd_settings['qty_threshold'] ?? 2); ?>" min="1">
+          </div>
+          <div class="hkdev-toggle-row" style="border:none;padding-bottom:0">
+            <div class="hkdev-toggle-info">
+              <strong>Enable Pulse Animation</strong>
+              <span>Show animated badge on cart/checkout page</span>
+            </div>
+            <label class="hkdev-toggle hkdev-toggle--emerald">
+              <input type="checkbox" id="hkdev-fd-enable-anim" <?php checked(!empty($fd_settings['enable_anim']), true); ?>>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="hkdev-card">
+        <div class="hkdev-card-header"><h3>Product &amp; Category Selection</h3><p>Global triggers for specific products and categories</p></div>
+        <div class="hkdev-grid-2">
+          <div>
+            <label class="hkdev-field-label">Allowed Products</label>
+            <div class="hkdev-search-input-wrap">
+              <input type="text" id="hkdev-fd-product-search" placeholder="Search products..." class="hkdev-search-input" autocomplete="off">
+              <div id="hkdev-fd-product-results" class="hkdev-search-results" style="display:none"></div>
+            </div>
+            <div id="hkdev-fd-product-tags" class="hkdev-tag-list">
+              <?php foreach ($fd_products as $p): ?>
+              <span class="hkdev-tag hkdev-fd-product-tag" data-id="<?php echo esc_attr($p['id']); ?>">
+                <?php echo esc_html($p['name']); ?>
+                <button type="button" onclick="jQuery(this).closest('.hkdev-tag').remove()">×</button>
+              </span>
+              <?php endforeach; ?>
+            </div>
+          </div>
+          <div>
+            <label class="hkdev-field-label">Allowed Categories</label>
+            <div class="hkdev-search-input-wrap">
+              <input type="text" id="hkdev-fd-cat-search" placeholder="Search categories..." class="hkdev-search-input" autocomplete="off">
+              <div id="hkdev-fd-cat-results" class="hkdev-search-results" style="display:none"></div>
+            </div>
+            <div id="hkdev-fd-cat-tags" class="hkdev-tag-list">
+              <?php foreach ($fd_categories as $c): ?>
+              <span class="hkdev-tag hkdev-fd-cat-tag" data-id="<?php echo esc_attr($c['id']); ?>">
+                <?php echo esc_html($c['name']); ?>
+                <button type="button" onclick="jQuery(this).closest('.hkdev-tag').remove()">×</button>
+              </span>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="submit-btn-row" style="display:flex;gap:12px;align-items:center">
+        <button type="button" id="hkdev-fd-save-btn" class="hkdev-btn hkdev-btn--emerald">Save Free Delivery Settings</button>
+        <span id="hkdev-fd-save-msg" style="font-size:13px;color:#10b981;display:none"></span>
+      </div>
+    </div>
+
+    <!-- Support Tab -->
+    <div id="delivery-tab-support" class="hkdev-tab-content">
+      <div class="hkdev-card">
+        <div class="hkdev-author-card">
+          <div class="hkdev-author-avatar">HK</div>
+          <div>
+            <h2 class="hkdev-author-name">HKDEV — Professional Solutions</h2>
+            <p class="hkdev-author-desc">We build high-performance WordPress &amp; WooCommerce extensions focused on security and conversion optimization.</p>
+            <div class="hkdev-author-links">
+              <a href="https://wa.me/8801712132191" target="_blank">Contact WhatsApp</a>
+              <a href="https://hkdev.com" target="_blank">Website</a>
+            </div>
+          </div>
+        </div>
+        <div class="hkdev-plugin-info">
+          <div class="hkdev-plugin-info-row"><span class="key">Plugin</span><span class="val">HKDEV SMS Suite</span></div>
+          <div class="hkdev-plugin-info-row"><span class="key">Version</span><span class="val">3.0.0</span></div>
+          <div class="hkdev-plugin-info-row"><span class="key">Free Delivery Module</span><span class="val">v2.0 (integrated)</span></div>
+          <div class="hkdev-plugin-info-row"><span class="key">Author</span><span class="val">HKDEV</span></div>
+          <div class="hkdev-plugin-info-row"><span class="key">License</span><span class="val">GPL v3</span></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /delivery view -->
+
+</div><!-- /hkdev-content -->
+
+
+<!-- ====== OTP PREVIEW MODAL ====== -->
+<div id="hkdev-otp-modal" class="hkdev-modal-overlay" style="display:none">
+  <div class="hkdev-modal-box">
+    <button class="hkdev-modal-close" id="hkdev-otp-modal-close">×</button>
+
+    <!-- Step 1: Phone Entry -->
+    <div class="hkdev-modal-step active" id="hkdev-otp-step-1">
+      <div style="width:56px;height:56px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.18 2 2 0 012 .01h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.9v2.02z"/></svg>
+      </div>
+      <h2 style="margin:0 0 6px;font-size:20px;color:#1e293b">Verify Phone Number</h2>
+      <p style="margin:0 0 24px;color:#64748b;font-size:13px">Enter your phone number to receive an OTP</p>
+      <input type="tel" id="hkdev-otp-phone-input" placeholder="01XXXXXXXXX" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;text-align:center;box-sizing:border-box;outline:none;transition:.2s" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+      <button id="hkdev-otp-send-btn" class="hkdev-btn hkdev-btn--primary" style="width:100%;margin-top:12px;padding:12px">Send OTP</button>
+    </div>
+
+    <!-- Step 2: OTP Entry -->
+    <div class="hkdev-modal-step" id="hkdev-otp-step-2">
+      <div style="width:56px;height:56px;background:#dbeafe;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </div>
+      <h2 style="margin:0 0 6px;font-size:20px;color:#1e293b">Enter OTP Code</h2>
+      <p style="margin:0 0 4px;color:#64748b;font-size:13px">Code sent to <strong id="hkdev-otp-phone-display"></strong></p>
+      <div class="hkdev-otp-inputs">
+        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
+        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
+        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
+        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
+        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
+        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
+      </div>
+      <p id="hkdev-otp-countdown" class="hkdev-countdown">Expires in 1:00</p>
+      <button id="hkdev-otp-verify-btn" class="hkdev-btn hkdev-btn--primary" style="width:100%;padding:12px;margin-top:8px">Verify OTP</button>
+      <button id="hkdev-resend-btn" class="hkdev-btn hkdev-btn--ghost" style="width:100%;margin-top:8px;padding:10px" disabled>Resend in 60s</button>
+    </div>
+
+    <!-- Step 3: Success -->
+    <div class="hkdev-modal-step" id="hkdev-otp-step-3">
+      <div style="width:56px;height:56px;background:#d1fae5;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2 style="margin:0 0 6px;font-size:20px;color:#1e293b">Verified!</h2>
+      <p style="margin:0 0 24px;color:#64748b;font-size:13px">Your phone number has been verified successfully.</p>
+      <button onclick="document.getElementById('hkdev-otp-modal').style.display='none'" class="hkdev-btn hkdev-btn--primary" style="width:100%;padding:12px">Continue to Checkout</button>
+    </div>
+  </div>
 </div>
 
-<style>
-    .checkbox-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-    }
-
-    .checkbox-label input {
-        cursor: pointer;
-    }
-
-    .form-group small {
-        display: block;
-        margin-top: 6px;
-        color: var(--text-muted);
-        font-size: 12px;
-    }
-
-    .logs-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .logs-table thead {
-        background: #f8fafc;
-    }
-
-    .logs-table tbody tr:nth-child(even) {
-        background: #f8fafc;
-    }
-
-    .logs-table tbody tr:hover {
-        background: #eef2ff;
-    }
-
-    .logs-table th {
-        padding: 12px;
-        text-align: left;
-        font-weight: 600;
-        border-bottom: 1px solid var(--border-light);
-        color: var(--text-main);
-    }
-
-    .logs-table td {
-        padding: 12px;
-        border-bottom: 1px solid var(--border-light);
-        color: var(--text-main);
-    }
-
-    .status-badge {
-        display: inline-block;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    .status-success {
-        background: var(--success-light);
-        color: #065f46;
-    }
-
-    .status-error {
-        background: var(--danger-light);
-        color: #7f1d1d;
-    }
-
-    .status-unknown {
-        background: #f3f4f6;
-        color: #4b5563;
-    }
-
-    .duration-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-
-    .duration-box {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .duration-box label {
-        display: block;
-        font-weight: 600;
-        color: var(--text-main);
-        margin-bottom: 8px;
-        font-size: 13px;
-    }
-
-    .duration-box input {
-        padding: 10px 12px;
-        border: 1px solid var(--border-light);
-        border-radius: 8px;
-        font-size: 14px;
-    }
-</style>
+</div><!-- /hkdev-suite-wrap -->
