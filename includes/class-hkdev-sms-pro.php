@@ -7,6 +7,9 @@ if (!defined('ABSPATH')) {
 class HKDEV_SMS_Pro {
 
     private const MAX_CHECKOUT_POST_DATA_LENGTH = 20000;
+    private const OTP_LENGTH_MIN = 4;
+    private const OTP_LENGTH_MAX = 8;
+    private const OTP_COOLDOWN_MIN_SECONDS = 10;
 
     private $sms_gateway;
     private $otp_handler;
@@ -333,7 +336,7 @@ class HKDEV_SMS_Pro {
         }
 
         $length = absint($_POST['hkdev_otp_length'] ?? 6);
-        $length = max(4, min(8, $length));
+        $length = max(self::OTP_LENGTH_MIN, min(self::OTP_LENGTH_MAX, $length));
 
         $settings = array(
             'hkdev_enable_gateway'               => !empty($_POST['hkdev_enable_gateway']) ? 'yes' : 'no',
@@ -344,7 +347,7 @@ class HKDEV_SMS_Pro {
             'hkdev_enable_order_blocker'         => !empty($_POST['hkdev_enable_order_blocker']) ? 'yes' : 'no',
             'hkdev_otp_length'                   => $length,
             'hkdev_otp_expiry_minutes'           => max(1, absint($_POST['hkdev_otp_expiry_minutes'] ?? 10)),
-            'hkdev_otp_cooldown_seconds'         => max(10, absint($_POST['hkdev_otp_cooldown_seconds'] ?? 60)),
+            'hkdev_otp_cooldown_seconds'         => max(self::OTP_COOLDOWN_MIN_SECONDS, absint($_POST['hkdev_otp_cooldown_seconds'] ?? 60)),
         );
 
         foreach ($settings as $key => $value) {

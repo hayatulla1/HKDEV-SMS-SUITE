@@ -220,7 +220,8 @@ jQuery(document).ready(function ($) {
                     }
                     var html = '';
                     $.each(res.data, function (i, p) {
-                        html += '<div class="hkdev-otp-product-result" data-id="' + p.id + '" data-name="' + $('<div>').text(p.name).html() + '">' + $('<div>').text(p.name).html() + '</div>';
+                        var escapedName = $('<div>').text(p.name).html();
+                        html += '<div class="hkdev-otp-product-result" data-id="' + p.id + '" data-name="' + escapedName + '">' + escapedName + '</div>';
                     });
                     $('#hkdev-otp-product-results').html(html).show();
                 }

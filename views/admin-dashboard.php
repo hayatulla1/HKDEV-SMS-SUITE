@@ -8,7 +8,10 @@ $active_blocks = class_exists('HKDEV_WC_Order_Delay_Blocker')
 $block_logs  = get_option('hkdev_block_logs', array());
 $fd_settings = get_option('hkdev_fd_settings', array());
 $otp_products = array();
-$otp_preset_template = 'আপনার OTP হলো {OTP}. OTP ভেরিফাই করলে অর্ডার প্লেস হবে এবং থ্যাংক ইউ পেজে যাবে।';
+$otp_preset_template = apply_filters(
+    'hkdev_prebuilt_otp_template',
+    'আপনার OTP হলো {OTP}. OTP ভেরিফাই করলে অর্ডার প্লেস হবে এবং থ্যাংক ইউ পেজে যাবে।'
+);
 $bal_amount  = $balance_cache['amount'] ?? 'N/A';
 $bal_display = is_numeric($bal_amount) ? '৳' . $bal_amount : $bal_amount;
 
