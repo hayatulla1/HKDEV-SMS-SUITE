@@ -323,17 +323,17 @@ jQuery(document).ready(function ($) {
         $.post(hkdevAjax.ajaxUrl, data, function (res) {
             if (res.success) {
                 $btn.text('✓ Saved!');
-                $msg.text(res.data || successFallback || 'Saved successfully.').show();
+                $msg.text(res.data || successFallback || 'Saved successfully.').css('color', '#10b981').show();
                 setTimeout(function () {
                     $btn.text(original).prop('disabled', false);
                     $msg.fadeOut();
                 }, 2500);
             } else {
-                alert('Error: ' + (res.data || 'Save failed'));
+                $msg.text(res.data || 'Save failed').css('color', '#ef4444').show();
                 $btn.text(original).prop('disabled', false);
             }
         }).fail(function () {
-            alert('Error: Save failed');
+            $msg.text('Save failed').css('color', '#ef4444').show();
             $btn.text(original).prop('disabled', false);
         });
     }

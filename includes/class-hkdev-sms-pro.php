@@ -335,7 +335,7 @@ class HKDEV_SMS_Pro {
             wp_send_json_error(__('Unauthorized', HKDEV_TEXT_DOMAIN));
         }
 
-        $length = absint(sanitize_text_field(wp_unslash($_POST['hkdev_otp_length'] ?? 6)));
+        $length = absint($_POST['hkdev_otp_length'] ?? 6);
         $length = max(self::OTP_LENGTH_MIN, min(self::OTP_LENGTH_MAX, $length));
 
         $settings = array(
@@ -346,8 +346,8 @@ class HKDEV_SMS_Pro {
             'hkdev_enable_logs'                  => !empty($_POST['hkdev_enable_logs']) ? 'yes' : 'no',
             'hkdev_enable_order_blocker'         => !empty($_POST['hkdev_enable_order_blocker']) ? 'yes' : 'no',
             'hkdev_otp_length'                   => $length,
-            'hkdev_otp_expiry_minutes'           => max(1, absint(sanitize_text_field(wp_unslash($_POST['hkdev_otp_expiry_minutes'] ?? 10)))),
-            'hkdev_otp_cooldown_seconds'         => max(self::OTP_COOLDOWN_MIN_SECONDS, absint(sanitize_text_field(wp_unslash($_POST['hkdev_otp_cooldown_seconds'] ?? 60)))),
+            'hkdev_otp_expiry_minutes'           => max(1, absint($_POST['hkdev_otp_expiry_minutes'] ?? 10)),
+            'hkdev_otp_cooldown_seconds'         => max(self::OTP_COOLDOWN_MIN_SECONDS, absint($_POST['hkdev_otp_cooldown_seconds'] ?? 60)),
         );
 
         foreach ($settings as $key => $value) {
@@ -396,8 +396,7 @@ class HKDEV_SMS_Pro {
 
         $products = array();
         if (isset($_POST['products'])) {
-            $raw_products = array_map('sanitize_text_field', (array) wp_unslash($_POST['products']));
-            $products = array_filter(array_map('absint', $raw_products));
+            $products = array_filter(array_map('absint', (array) $_POST['products']));
         }
         $product_string = implode(',', $products);
 
@@ -422,9 +421,9 @@ class HKDEV_SMS_Pro {
         }
 
         $settings = array(
-            'usp_wcodb_block_duration_days'    => max(0, absint(sanitize_text_field(wp_unslash($_POST['usp_wcodb_block_duration_days'] ?? 0)))),
-            'usp_wcodb_block_duration_hours'   => max(0, absint(sanitize_text_field(wp_unslash($_POST['usp_wcodb_block_duration_hours'] ?? 0)))),
-            'usp_wcodb_block_duration_minutes' => max(0, absint(sanitize_text_field(wp_unslash($_POST['usp_wcodb_block_duration_minutes'] ?? 60)))),
+            'usp_wcodb_block_duration_days'    => max(0, absint($_POST['usp_wcodb_block_duration_days'] ?? 0)),
+            'usp_wcodb_block_duration_hours'   => max(0, absint($_POST['usp_wcodb_block_duration_hours'] ?? 0)),
+            'usp_wcodb_block_duration_minutes' => max(0, absint($_POST['usp_wcodb_block_duration_minutes'] ?? 60)),
             'usp_wcodb_combined_block_enabled' => !empty($_POST['usp_wcodb_combined_block_enabled']) ? 'yes' : 'no',
         );
 

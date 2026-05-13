@@ -10,7 +10,7 @@ $fd_settings = get_option('hkdev_fd_settings', array());
 $otp_products = array();
 $otp_preset_template = apply_filters(
     'hkdev_prebuilt_otp_template',
-    'আপনার OTP হলো {OTP}. OTP ভেরিফাই করলে অর্ডার প্লেস হবে এবং থ্যাংক ইউ পেজে যাবে।'
+    __('আপনার OTP হলো {OTP}. OTP ভেরিফাই করলে অর্ডার প্লেস হবে এবং থ্যাংক ইউ পেজে যাবে।', HKDEV_TEXT_DOMAIN)
 );
 $bal_amount  = $balance_cache['amount'] ?? 'N/A';
 $bal_display = is_numeric($bal_amount) ? '৳' . $bal_amount : $bal_amount;
@@ -35,8 +35,8 @@ $otp_target_setting = get_option('sib_target_products', '');
 $otp_target_raw = is_array($otp_target_setting) ? $otp_target_setting : explode(',', (string) $otp_target_setting);
 $otp_target_ids = array_unique(array_filter(array_map('absint', (array) $otp_target_raw)));
 foreach ($otp_target_ids as $pid) {
-    $p = wc_get_product(absint($pid));
-    if ($p) $otp_products[] = array('id' => absint($pid), 'name' => $p->get_name());
+    $p = wc_get_product($pid);
+    if ($p) $otp_products[] = array('id' => $pid, 'name' => $p->get_name());
 }
 
 $blocked_total = count($active_blocks);
