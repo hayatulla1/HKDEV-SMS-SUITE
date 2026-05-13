@@ -53,38 +53,41 @@ class HKDEV_SMS_Pro {
     }
 
     public function register_plugin_settings() {
-        $group = 'hkdev_settings_group';
+        $general_group   = 'hkdev_settings_general_group';
+        $api_group       = 'hkdev_settings_api_group';
+        $template_group  = 'hkdev_settings_templates_group';
+        $blocker_group   = 'hkdev_settings_blocker_group';
 
-        register_setting($group, 'sib_gateway_url', array('sanitize_callback' => 'esc_url_raw'));
-        register_setting($group, 'sib_api_token', array('sanitize_callback' => 'sanitize_text_field'));
-        register_setting($group, 'sib_sender_id', array('sanitize_callback' => 'sanitize_text_field'));
-        register_setting($group, 'sib_http_method', array('sanitize_callback' => 'sanitize_text_field'));
-        register_setting($group, 'sib_param_token', array('sanitize_callback' => 'sanitize_key'));
-        register_setting($group, 'sib_param_sender', array('sanitize_callback' => 'sanitize_key'));
-        register_setting($group, 'sib_param_number', array('sanitize_callback' => 'sanitize_key'));
-        register_setting($group, 'sib_param_msg', array('sanitize_callback' => 'sanitize_key'));
-        register_setting($group, 'hkdev_balance_api_url', array('sanitize_callback' => 'esc_url_raw'));
-        register_setting($group, 'hkdev_balance_response_key', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($api_group, 'sib_gateway_url', array('sanitize_callback' => 'esc_url_raw'));
+        register_setting($api_group, 'sib_api_token', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($api_group, 'sib_sender_id', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($api_group, 'sib_http_method', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($api_group, 'sib_param_token', array('sanitize_callback' => 'sanitize_key'));
+        register_setting($api_group, 'sib_param_sender', array('sanitize_callback' => 'sanitize_key'));
+        register_setting($api_group, 'sib_param_number', array('sanitize_callback' => 'sanitize_key'));
+        register_setting($api_group, 'sib_param_msg', array('sanitize_callback' => 'sanitize_key'));
+        register_setting($api_group, 'hkdev_balance_api_url', array('sanitize_callback' => 'esc_url_raw'));
+        register_setting($api_group, 'hkdev_balance_response_key', array('sanitize_callback' => 'sanitize_text_field'));
 
-        register_setting($group, 'hkdev_enable_gateway', array('sanitize_callback' => 'sanitize_text_field'));
-        register_setting($group, 'hkdev_enable_otp', array('sanitize_callback' => 'sanitize_text_field'));
-        register_setting($group, 'hkdev_enable_order_confirmation_sms', array('sanitize_callback' => 'sanitize_text_field'));
-        register_setting($group, 'hkdev_enable_status_sms', array('sanitize_callback' => 'sanitize_text_field'));
-        register_setting($group, 'hkdev_enable_logs', array('sanitize_callback' => 'sanitize_text_field'));
-        register_setting($group, 'hkdev_enable_order_blocker', array('sanitize_callback' => 'sanitize_text_field'));
-        register_setting($group, 'hkdev_otp_length', array('sanitize_callback' => 'absint', 'default' => 6));
+        register_setting($general_group, 'hkdev_enable_gateway', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($general_group, 'hkdev_enable_otp', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($general_group, 'hkdev_enable_order_confirmation_sms', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($general_group, 'hkdev_enable_status_sms', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($general_group, 'hkdev_enable_logs', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($general_group, 'hkdev_enable_order_blocker', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($general_group, 'hkdev_otp_length', array('sanitize_callback' => 'absint', 'default' => 6));
+        register_setting($general_group, 'hkdev_otp_expiry_minutes', array('sanitize_callback' => 'absint', 'default' => 10));
+        register_setting($general_group, 'hkdev_otp_cooldown_seconds', array('sanitize_callback' => 'absint', 'default' => 60));
 
-        register_setting($group, 'sib_target_products', array('sanitize_callback' => 'sanitize_text_field'));
-        register_setting($group, 'sib_otp_template', array('sanitize_callback' => 'wp_kses_post'));
-        register_setting($group, 'sib_order_template', array('sanitize_callback' => 'wp_kses_post'));
-        register_setting($group, 'sib_status_template', array('sanitize_callback' => 'wp_kses_post'));
-        register_setting($group, 'hkdev_otp_expiry_minutes', array('sanitize_callback' => 'absint', 'default' => 10));
-        register_setting($group, 'hkdev_otp_cooldown_seconds', array('sanitize_callback' => 'absint', 'default' => 60));
+        register_setting($template_group, 'sib_target_products', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($template_group, 'sib_otp_template', array('sanitize_callback' => 'wp_kses_post'));
+        register_setting($template_group, 'sib_order_template', array('sanitize_callback' => 'wp_kses_post'));
+        register_setting($template_group, 'sib_status_template', array('sanitize_callback' => 'wp_kses_post'));
 
-        register_setting($group, 'usp_wcodb_block_duration_days', array('sanitize_callback' => 'absint', 'default' => 0));
-        register_setting($group, 'usp_wcodb_block_duration_hours', array('sanitize_callback' => 'absint', 'default' => 0));
-        register_setting($group, 'usp_wcodb_block_duration_minutes', array('sanitize_callback' => 'absint', 'default' => 60));
-        register_setting($group, 'usp_wcodb_combined_block_enabled', array('sanitize_callback' => 'sanitize_text_field'));
+        register_setting($blocker_group, 'usp_wcodb_block_duration_days', array('sanitize_callback' => 'absint', 'default' => 0));
+        register_setting($blocker_group, 'usp_wcodb_block_duration_hours', array('sanitize_callback' => 'absint', 'default' => 0));
+        register_setting($blocker_group, 'usp_wcodb_block_duration_minutes', array('sanitize_callback' => 'absint', 'default' => 60));
+        register_setting($blocker_group, 'usp_wcodb_combined_block_enabled', array('sanitize_callback' => 'sanitize_text_field'));
     }
 
     public function enqueue_admin_assets($hook) {

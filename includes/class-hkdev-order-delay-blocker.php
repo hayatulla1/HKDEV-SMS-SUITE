@@ -29,7 +29,7 @@ class HKDEV_WC_Order_Delay_Blocker {
     }
 
     public function register_settings() {
-        $group = 'hkdev_settings_group';
+        $group = 'hkdev_settings_blocker_group';
         register_setting($group, self::OPTION_DURATION_MINUTES, array('type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 60));
         register_setting($group, self::OPTION_DURATION_HOURS,   array('type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 0));
         register_setting($group, self::OPTION_DURATION_DAYS,    array('type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 0));

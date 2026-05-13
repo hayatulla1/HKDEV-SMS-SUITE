@@ -260,7 +260,7 @@ class My_OTP_Handler extends HKDEV_OTP_Handler {
 
 ```php
 add_action('admin_init', function() {
-    register_setting('hkdev_settings_group', 'my_custom_option');
+    register_setting('hkdev_settings_general_group', 'my_custom_option');
 });
 ```
 
