@@ -30,6 +30,20 @@ jQuery(document).ready(function ($) {
         });
     }
 
+    function hkdevAddOtpProductTag(id, name) {
+        if (!id || !name) {
+            return;
+        }
+        if ($('#hkdev-otp-product-tags .hkdev-otp-product-tag[data-id="' + id + '"]').length) {
+            return;
+        }
+        var $tag = $('<span class="hkdev-tag hkdev-otp-product-tag" data-id="' + id + '"></span>');
+        $tag.append(document.createTextNode(name));
+        $tag.append('<input type="hidden" name="sib_target_products[]" value="' + id + '" class="hkdev-otp-product-input">');
+        $tag.append('<button type="button" class="hkdev-tag-remove">×</button>');
+        $('#hkdev-otp-product-tags').append($tag);
+    }
+
     // ── Blocked User Expand / Collapse ──────────────────────────────────────────
     $(document).on('click', '.hkdev-blocked-header', function () {
         $(this).closest('.hkdev-blocked-item').toggleClass('open');
@@ -169,6 +183,17 @@ jQuery(document).ready(function ($) {
         }, 300);
     });
 
+    $(document).on('keydown', '#hkdev-fd-product-search', function (e) {
+        if (e.key !== 'Enter') {
+            return;
+        }
+        var $first = $('#hkdev-fd-product-results .hkdev-fd-product-result').first();
+        if ($first.length) {
+            e.preventDefault();
+            $first.trigger('click');
+        }
+    });
+
     $(document).on('click', '.hkdev-fd-product-result', function () {
         var id   = $(this).data('id');
         var name = $(this).data('name');
@@ -211,6 +236,17 @@ jQuery(document).ready(function ($) {
         }, 300);
     });
 
+    $(document).on('keydown', '#hkdev-fd-cat-search', function (e) {
+        if (e.key !== 'Enter') {
+            return;
+        }
+        var $first = $('#hkdev-fd-cat-results .hkdev-fd-cat-result').first();
+        if ($first.length) {
+            e.preventDefault();
+            $first.trigger('click');
+        }
+    });
+
     $(document).on('click', '.hkdev-fd-cat-result', function () {
         var id   = $(this).data('id');
         var name = $(this).data('name');
@@ -244,7 +280,7 @@ jQuery(document).ready(function ($) {
                         var $item = $('<div class="hkdev-otp-product-result"></div>');
                         $item.text(p.name);
                         $item.attr('data-id', p.id);
-                        $item.data('name', p.name);
+                        $item.attr('data-name', p.name);
                         $results.append($item);
                     });
                     $results.show();
@@ -253,16 +289,21 @@ jQuery(document).ready(function ($) {
         }, 300);
     });
 
+    $(document).on('keydown', '#hkdev-otp-product-search', function (e) {
+        if (e.key !== 'Enter') {
+            return;
+        }
+        var $first = $('#hkdev-otp-product-results .hkdev-otp-product-result').first();
+        if ($first.length) {
+            e.preventDefault();
+            $first.trigger('click');
+        }
+    });
+
     $(document).on('click', '.hkdev-otp-product-result', function () {
         var id   = $(this).data('id');
         var name = $(this).data('name');
-        if (!$('.hkdev-otp-product-tag[data-id="' + id + '"]').length) {
-            $('#hkdev-otp-product-tags').append(
-                '<span class="hkdev-tag hkdev-otp-product-tag" data-id="' + id + '">' +
-                hkdevEscapeHtml(name) +
-                '<button type="button" class="hkdev-tag-remove">×</button></span>'
-            );
-        }
+        hkdevAddOtpProductTag(id, name);
         $('#hkdev-otp-product-search').val('');
         $('#hkdev-otp-product-results').hide();
     });
@@ -330,15 +371,22 @@ jQuery(document).ready(function ($) {
         $btn.text('Saving…').prop('disabled', true);
 
         $.post(hkdevAjax.ajaxUrl, data, function (res) {
+            if (!res || typeof res.success === 'undefined') {
+                $msg.text('Unexpected server response').css('color', '#ef4444').show();
+                $btn.text(original).prop('disabled', false);
+                return;
+            }
             if (res.success) {
                 $btn.text('✓ Saved!');
-                $msg.text(res.data || successFallback || 'Saved successfully.').css('color', '#10b981').show();
+                var successMessage = res.data && res.data.message ? res.data.message : res.data;
+                $msg.text(successMessage || successFallback || 'Saved successfully.').css('color', '#10b981').show();
                 setTimeout(function () {
                     $btn.text(original).prop('disabled', false);
                     $msg.fadeOut();
                 }, 2500);
             } else {
-                $msg.text(res.data || 'Save failed').css('color', '#ef4444').show();
+                var errorMessage = res.data && res.data.message ? res.data.message : res.data;
+                $msg.text(errorMessage || 'Save failed').css('color', '#ef4444').show();
                 $btn.text(original).prop('disabled', false);
             }
         }).fail(function () {
@@ -389,7 +437,14 @@ jQuery(document).ready(function ($) {
     // ── Templates Save ─────────────────────────────────────────────────────────
     $(document).on('click', '#hkdev-save-templates', function () {
         var products = [];
-        $('.hkdev-otp-product-tag').each(function () { products.push($(this).data('id')); });
+        var seen = {};
+        $('.hkdev-otp-product-input').each(function () {
+            var id = $(this).val();
+            if (id && !seen[id]) {
+                seen[id] = true;
+                products.push(id);
+            }
+        });
 
         var data = {
             action: 'hkdev_save_template_settings',
