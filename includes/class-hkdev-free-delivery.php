@@ -166,7 +166,7 @@ class HKDEV_Free_Delivery_Module {
 
     // AJAX: Search categories
     public function ajax_search_categories() {
-        check_ajax_referer('search-products', 'security');
+        check_ajax_referer('wc_product_search', 'security');
         $term       = sanitize_text_field($_GET['term'] ?? '');
         $categories = get_terms(array(
             'taxonomy'   => 'product_cat',

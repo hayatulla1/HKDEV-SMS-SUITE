@@ -12,6 +12,7 @@ class HKDEV_WC_Order_Delay_Blocker {
     private const OPTION_COMBINED_BLOCK   = 'usp_wcodb_combined_block_enabled';
     private const OPTION_ACTIVE_BLOCKS    = 'hkdev_active_blocks';
     private const OPTION_BLOCK_LOGS       = 'hkdev_block_logs';
+    private const MAX_POST_DATA_LENGTH    = 20000;
 
     private $block_transient_prefix = 'wcodb_block_';
 
@@ -47,10 +48,12 @@ class HKDEV_WC_Order_Delay_Blocker {
 
         if (empty($billing_phone) && isset($_POST['post_data'])) {
             $post_data     = array();
-            $post_data_raw = sanitize_text_field(wp_unslash($_POST['post_data']));
-            parse_str($post_data_raw, $post_data);
-            if (!empty($post_data['billing_phone'])) {
-                $billing_phone = sanitize_text_field($post_data['billing_phone']);
+            $post_data_raw = wp_unslash($_POST['post_data']);
+            if (is_string($post_data_raw) && strlen($post_data_raw) <= self::MAX_POST_DATA_LENGTH) {
+                parse_str($post_data_raw, $post_data);
+                if (!empty($post_data['billing_phone'])) {
+                    $billing_phone = sanitize_text_field($post_data['billing_phone']);
+                }
             }
         }
 
