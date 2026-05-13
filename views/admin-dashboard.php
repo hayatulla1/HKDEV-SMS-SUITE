@@ -102,7 +102,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
     <!-- General Settings Tab -->
     <div id="sms-tab-general" class="hkdev-tab-content active">
       <form method="post" action="options.php">
-        <?php settings_fields('hkdev_settings_group'); ?>
+        <?php settings_fields('hkdev_settings_general_group'); ?>
         <div class="hkdev-grid-2">
           <div class="hkdev-card">
             <div class="hkdev-card-header">
@@ -159,7 +159,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
     <!-- API Credentials Tab -->
     <div id="sms-tab-api" class="hkdev-tab-content">
       <form method="post" action="options.php">
-        <?php settings_fields('hkdev_settings_group'); ?>
+        <?php settings_fields('hkdev_settings_api_group'); ?>
         <div class="hkdev-grid-2">
           <div class="hkdev-card">
             <div class="hkdev-card-header"><h3>Gateway Settings</h3><p>Configure your SMS provider</p></div>
@@ -246,7 +246,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
     <!-- SMS Templates Tab -->
     <div id="sms-tab-templates" class="hkdev-tab-content">
       <form method="post" action="options.php">
-        <?php settings_fields('hkdev_settings_group'); ?>
+        <?php settings_fields('hkdev_settings_templates_group'); ?>
         <div class="hkdev-card">
           <div class="hkdev-card-header">
             <h3>Target Products for OTP</h3>
@@ -341,7 +341,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
     <!-- Settings Tab -->
     <div id="blocker-tab-settings" class="hkdev-tab-content active">
       <form method="post" action="options.php">
-        <?php settings_fields('hkdev_settings_group'); ?>
+        <?php settings_fields('hkdev_settings_blocker_group'); ?>
         <div class="hkdev-card">
           <div class="hkdev-card-header"><h3>Block Duration</h3><p>How long to block after a completed order</p></div>
           <div class="hkdev-grid-3">
