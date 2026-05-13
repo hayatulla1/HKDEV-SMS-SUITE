@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: HKDEV SMS Suite
- * Description: Professional SMS, OTP, Order Blocker & Abandoned Cart toolkit for WooCommerce
- * Version: 2.0.0
+ * Description: Professional SMS, OTP, Order Blocker & Free Delivery toolkit for WooCommerce
+ * Version: 3.0.0
  * Author: HKDEV
  * Author URI: https://hkdev.com
  * License: GPL v3
@@ -14,11 +14,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Define Plugin Constants
 define('HKDEV_PLUGIN_FILE', __FILE__);
 define('HKDEV_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('HKDEV_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('HKDEV_PLUGIN_VERSION', '2.0.0');
+define('HKDEV_PLUGIN_VERSION', '3.0.0');
 define('HKDEV_TEXT_DOMAIN', 'hkdev-sms-suite');
 
 function hkdev_option_is_enabled($option_name, $default = 'yes') {
@@ -31,7 +30,6 @@ function hkdev_normalize_phone($phone_number) {
     return preg_replace('/[^0-9+]/', '', $phone_number);
 }
 
-// Plugin Activation & Deactivation Hooks
 register_activation_hook(__FILE__, 'hkdev_plugin_activate');
 register_deactivation_hook(__FILE__, 'hkdev_plugin_deactivate');
 
@@ -45,20 +43,21 @@ function hkdev_plugin_activate() {
         update_option('hkdev_otp_expiry_minutes', 10);
         update_option('hkdev_otp_cooldown_seconds', 60);
         update_option('sib_sms_logs', array());
+        update_option('hkdev_active_blocks', array());
+        update_option('hkdev_block_logs', array());
     }
 }
 
 function hkdev_plugin_deactivate() {
-    // Cleanup code
+    // Cleanup
 }
 
-// Require core classes
 require_once HKDEV_PLUGIN_DIR . 'includes/class-hkdev-sms-gateway.php';
 require_once HKDEV_PLUGIN_DIR . 'includes/class-hkdev-otp-handler.php';
 require_once HKDEV_PLUGIN_DIR . 'includes/class-hkdev-sms-pro.php';
 require_once HKDEV_PLUGIN_DIR . 'includes/class-hkdev-order-delay-blocker.php';
+require_once HKDEV_PLUGIN_DIR . 'includes/class-hkdev-free-delivery.php';
 
-// Plugin Initialization
 add_action('plugins_loaded', 'hkdev_initialize_plugin', 10);
 
 function hkdev_initialize_plugin() {
@@ -72,13 +71,14 @@ function hkdev_initialize_plugin() {
     }
 
     new HKDEV_SMS_Pro();
-    
+
     if (hkdev_option_is_enabled('hkdev_enable_order_blocker', 'yes')) {
         new HKDEV_WC_Order_Delay_Blocker();
     }
+
+    HKDEV_Free_Delivery_Module::instance();
 }
 
-// Load text domain for translations
 add_action('init', function() {
     load_plugin_textdomain(HKDEV_TEXT_DOMAIN, false, dirname(plugin_basename(__FILE__)) . '/languages');
 });
