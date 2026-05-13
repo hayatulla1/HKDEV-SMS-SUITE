@@ -204,10 +204,48 @@ jQuery(document).ready(function ($) {
         $('#hkdev-fd-cat-results').hide();
     });
 
+    // ── SMS Templates: Product Search ───────────────────────────────────────────
+    var otpProductTimer;
+    $(document).on('input', '#hkdev-otp-product-search', function () {
+        clearTimeout(otpProductTimer);
+        var term = $(this).val().trim();
+        if (term.length < 2) { $('#hkdev-otp-product-results').hide(); return; }
+
+        otpProductTimer = setTimeout(function () {
+            $.post(hkdevAjax.ajaxUrl, { action: 'hkdev_search_products', nonce: hkdevAjax.nonce, term: term },
+                function (res) {
+                    if (!res.success || !res.data.length) {
+                        $('#hkdev-otp-product-results').html('<div class="no-results">No products found</div>').show();
+                        return;
+                    }
+                    var html = '';
+                    $.each(res.data, function (i, p) {
+                        html += '<div class="hkdev-otp-product-result" data-id="' + p.id + '" data-name="' + $('<div>').text(p.name).html() + '">' + $('<div>').text(p.name).html() + '</div>';
+                    });
+                    $('#hkdev-otp-product-results').html(html).show();
+                }
+            );
+        }, 300);
+    });
+
+    $(document).on('click', '.hkdev-otp-product-result', function () {
+        var id   = $(this).data('id');
+        var name = $(this).data('name');
+        if (!$('.hkdev-otp-product-tag[data-id="' + id + '"]').length) {
+            $('#hkdev-otp-product-tags').append(
+                '<span class="hkdev-tag hkdev-otp-product-tag" data-id="' + id + '">' +
+                $('<div>').text(name).html() +
+                '<button type="button" onclick="jQuery(this).closest(\'.hkdev-tag\').remove()">×</button></span>'
+            );
+        }
+        $('#hkdev-otp-product-search').val('');
+        $('#hkdev-otp-product-results').hide();
+    });
+
     // Close dropdowns on outside click
     $(document).on('click', function (e) {
         if (!$(e.target).closest('.hkdev-search-input-wrap').length) {
-            $('#hkdev-fd-product-results, #hkdev-fd-cat-results').hide();
+            $('#hkdev-fd-product-results, #hkdev-fd-cat-results, #hkdev-otp-product-results').hide();
         }
     });
 
@@ -246,6 +284,107 @@ jQuery(document).ready(function ($) {
                 $btn.text('Save Free Delivery Settings').prop('disabled', false);
             }
         });
+    });
+
+    // ── SMS Templates: Prebuilt OTP Template ───────────────────────────────────
+    $(document).on('click', '#hkdev-use-prebuilt-otp', function () {
+        var template = $(this).data('template') || '';
+        if (template) {
+            $('textarea[name="sib_otp_template"]').val(template);
+        }
+    });
+
+    // ── Admin Settings: AJAX Save Helpers ──────────────────────────────────────
+    function hkdevHandleSave($btn, $msg, data, successFallback) {
+        var original = $btn.text();
+        $btn.text('Saving…').prop('disabled', true);
+
+        $.post(hkdevAjax.ajaxUrl, data, function (res) {
+            if (res.success) {
+                $btn.text('✓ Saved!');
+                $msg.text(res.data || successFallback || 'Saved successfully.').show();
+                setTimeout(function () {
+                    $btn.text(original).prop('disabled', false);
+                    $msg.fadeOut();
+                }, 2500);
+            } else {
+                alert('Error: ' + (res.data || 'Save failed'));
+                $btn.text(original).prop('disabled', false);
+            }
+        }).fail(function () {
+            alert('Error: Save failed');
+            $btn.text(original).prop('disabled', false);
+        });
+    }
+
+    // ── General Settings Save ──────────────────────────────────────────────────
+    $(document).on('click', '#hkdev-save-general', function () {
+        var data = {
+            action: 'hkdev_save_general_settings',
+            nonce: hkdevAjax.nonce,
+            hkdev_enable_gateway: $('input[name="hkdev_enable_gateway"]').is(':checked') ? 1 : 0,
+            hkdev_enable_otp: $('input[name="hkdev_enable_otp"]').is(':checked') ? 1 : 0,
+            hkdev_enable_order_confirmation_sms: $('input[name="hkdev_enable_order_confirmation_sms"]').is(':checked') ? 1 : 0,
+            hkdev_enable_status_sms: $('input[name="hkdev_enable_status_sms"]').is(':checked') ? 1 : 0,
+            hkdev_enable_logs: $('input[name="hkdev_enable_logs"]').is(':checked') ? 1 : 0,
+            hkdev_enable_order_blocker: $('input[name="hkdev_enable_order_blocker"]').is(':checked') ? 1 : 0,
+            hkdev_otp_length: $('input[name="hkdev_otp_length"]').val(),
+            hkdev_otp_expiry_minutes: $('input[name="hkdev_otp_expiry_minutes"]').val(),
+            hkdev_otp_cooldown_seconds: $('input[name="hkdev_otp_cooldown_seconds"]').val()
+        };
+
+        hkdevHandleSave($(this), $('#hkdev-save-general-msg'), data, 'Settings saved successfully.');
+    });
+
+    // ── API Settings Save ──────────────────────────────────────────────────────
+    $(document).on('click', '#hkdev-save-api', function () {
+        var data = {
+            action: 'hkdev_save_api_settings',
+            nonce: hkdevAjax.nonce,
+            sib_gateway_url: $('input[name="sib_gateway_url"]').val(),
+            sib_api_token: $('input[name="sib_api_token"]').val(),
+            sib_sender_id: $('input[name="sib_sender_id"]').val(),
+            sib_http_method: $('select[name="sib_http_method"]').val(),
+            sib_param_token: $('input[name="sib_param_token"]').val(),
+            sib_param_sender: $('input[name="sib_param_sender"]').val(),
+            sib_param_number: $('input[name="sib_param_number"]').val(),
+            sib_param_msg: $('input[name="sib_param_msg"]').val(),
+            hkdev_balance_api_url: $('input[name="hkdev_balance_api_url"]').val(),
+            hkdev_balance_response_key: $('input[name="hkdev_balance_response_key"]').val()
+        };
+
+        hkdevHandleSave($(this), $('#hkdev-save-api-msg'), data, 'Settings saved successfully.');
+    });
+
+    // ── Templates Save ─────────────────────────────────────────────────────────
+    $(document).on('click', '#hkdev-save-templates', function () {
+        var products = [];
+        $('.hkdev-otp-product-tag').each(function () { products.push($(this).data('id')); });
+
+        var data = {
+            action: 'hkdev_save_template_settings',
+            nonce: hkdevAjax.nonce,
+            sib_otp_template: $('textarea[name="sib_otp_template"]').val(),
+            sib_order_template: $('textarea[name="sib_order_template"]').val(),
+            sib_status_template: $('textarea[name="sib_status_template"]').val()
+        };
+        data['products[]'] = products;
+
+        hkdevHandleSave($(this), $('#hkdev-save-templates-msg'), data, 'Templates saved successfully.');
+    });
+
+    // ── Blocker Settings Save ──────────────────────────────────────────────────
+    $(document).on('click', '#hkdev-save-blocker', function () {
+        var data = {
+            action: 'hkdev_save_blocker_settings',
+            nonce: hkdevAjax.nonce,
+            usp_wcodb_block_duration_days: $('input[name="usp_wcodb_block_duration_days"]').val(),
+            usp_wcodb_block_duration_hours: $('input[name="usp_wcodb_block_duration_hours"]').val(),
+            usp_wcodb_block_duration_minutes: $('input[name="usp_wcodb_block_duration_minutes"]').val(),
+            usp_wcodb_combined_block_enabled: $('input[name="usp_wcodb_combined_block_enabled"]').is(':checked') ? 1 : 0
+        };
+
+        hkdevHandleSave($(this), $('#hkdev-save-blocker-msg'), data, 'Settings saved successfully.');
     });
 
     // ── OTP Preview Modal ───────────────────────────────────────────────────────

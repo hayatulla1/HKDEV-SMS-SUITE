@@ -33,6 +33,10 @@ class HKDEV_SMS_Pro {
         add_action('wp_ajax_hkdev_check_balance', array($this, 'ajax_check_balance'));
         add_action('wp_ajax_hkdev_clear_logs', array($this, 'ajax_clear_logs'));
         add_action('wp_ajax_hkdev_search_products', array($this, 'ajax_search_products'));
+        add_action('wp_ajax_hkdev_save_general_settings', array($this, 'ajax_save_general_settings'));
+        add_action('wp_ajax_hkdev_save_api_settings', array($this, 'ajax_save_api_settings'));
+        add_action('wp_ajax_hkdev_save_template_settings', array($this, 'ajax_save_template_settings'));
+        add_action('wp_ajax_hkdev_save_blocker_settings', array($this, 'ajax_save_blocker_settings'));
 
         // WooCommerce Hooks
         add_action('woocommerce_checkout_process', array($this, 'validate_checkout_otp'));
@@ -159,8 +163,10 @@ class HKDEV_SMS_Pro {
             return false;
         }
 
+        $target_setting = get_option('sib_target_products', '');
+        $target_raw = is_array($target_setting) ? $target_setting : explode(',', (string) $target_setting);
         $targets = array_unique(array_filter(
-            array_map('absint', explode(',', get_option('sib_target_products', ''))),
+            array_map('absint', (array) $target_raw),
             static function ($id) { return $id > 0; }
         ));
 
@@ -318,6 +324,111 @@ class HKDEV_SMS_Pro {
         }
 
         wp_send_json_success($results);
+    }
+
+    public function ajax_save_general_settings() {
+        check_ajax_referer('hkdev_admin_nonce', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Unauthorized', HKDEV_TEXT_DOMAIN));
+        }
+
+        $length = absint($_POST['hkdev_otp_length'] ?? 6);
+        $length = max(4, min(8, $length));
+
+        $settings = array(
+            'hkdev_enable_gateway'               => !empty($_POST['hkdev_enable_gateway']) ? 'yes' : 'no',
+            'hkdev_enable_otp'                   => !empty($_POST['hkdev_enable_otp']) ? 'yes' : 'no',
+            'hkdev_enable_order_confirmation_sms'=> !empty($_POST['hkdev_enable_order_confirmation_sms']) ? 'yes' : 'no',
+            'hkdev_enable_status_sms'            => !empty($_POST['hkdev_enable_status_sms']) ? 'yes' : 'no',
+            'hkdev_enable_logs'                  => !empty($_POST['hkdev_enable_logs']) ? 'yes' : 'no',
+            'hkdev_enable_order_blocker'         => !empty($_POST['hkdev_enable_order_blocker']) ? 'yes' : 'no',
+            'hkdev_otp_length'                   => $length,
+            'hkdev_otp_expiry_minutes'           => max(1, absint($_POST['hkdev_otp_expiry_minutes'] ?? 10)),
+            'hkdev_otp_cooldown_seconds'         => max(10, absint($_POST['hkdev_otp_cooldown_seconds'] ?? 60)),
+        );
+
+        foreach ($settings as $key => $value) {
+            update_option($key, $value);
+        }
+
+        wp_send_json_success(__('Settings saved successfully', HKDEV_TEXT_DOMAIN));
+    }
+
+    public function ajax_save_api_settings() {
+        check_ajax_referer('hkdev_admin_nonce', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Unauthorized', HKDEV_TEXT_DOMAIN));
+        }
+
+        $http_method = sanitize_text_field($_POST['sib_http_method'] ?? 'GET');
+        if (!in_array($http_method, array('GET', 'POST'), true)) {
+            $http_method = 'GET';
+        }
+
+        $settings = array(
+            'sib_gateway_url'          => esc_url_raw($_POST['sib_gateway_url'] ?? ''),
+            'sib_api_token'            => sanitize_text_field($_POST['sib_api_token'] ?? ''),
+            'sib_sender_id'            => sanitize_text_field($_POST['sib_sender_id'] ?? ''),
+            'sib_http_method'          => $http_method,
+            'sib_param_token'          => sanitize_key($_POST['sib_param_token'] ?? 'token'),
+            'sib_param_sender'         => sanitize_key($_POST['sib_param_sender'] ?? 'sender'),
+            'sib_param_number'         => sanitize_key($_POST['sib_param_number'] ?? 'number'),
+            'sib_param_msg'            => sanitize_key($_POST['sib_param_msg'] ?? 'message'),
+            'hkdev_balance_api_url'    => esc_url_raw($_POST['hkdev_balance_api_url'] ?? ''),
+            'hkdev_balance_response_key' => sanitize_text_field($_POST['hkdev_balance_response_key'] ?? 'balance'),
+        );
+
+        foreach ($settings as $key => $value) {
+            update_option($key, $value);
+        }
+
+        wp_send_json_success(__('API settings saved successfully', HKDEV_TEXT_DOMAIN));
+    }
+
+    public function ajax_save_template_settings() {
+        check_ajax_referer('hkdev_admin_nonce', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Unauthorized', HKDEV_TEXT_DOMAIN));
+        }
+
+        $products = array();
+        if (isset($_POST['products'])) {
+            $products = array_filter(array_map('absint', (array) $_POST['products']));
+        }
+        $product_string = implode(',', $products);
+
+        $settings = array(
+            'sib_target_products' => $product_string,
+            'sib_otp_template'    => wp_kses_post($_POST['sib_otp_template'] ?? ''),
+            'sib_order_template'  => wp_kses_post($_POST['sib_order_template'] ?? ''),
+            'sib_status_template' => wp_kses_post($_POST['sib_status_template'] ?? ''),
+        );
+
+        foreach ($settings as $key => $value) {
+            update_option($key, $value);
+        }
+
+        wp_send_json_success(__('Templates saved successfully', HKDEV_TEXT_DOMAIN));
+    }
+
+    public function ajax_save_blocker_settings() {
+        check_ajax_referer('hkdev_admin_nonce', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Unauthorized', HKDEV_TEXT_DOMAIN));
+        }
+
+        $settings = array(
+            'usp_wcodb_block_duration_days'    => max(0, absint($_POST['usp_wcodb_block_duration_days'] ?? 0)),
+            'usp_wcodb_block_duration_hours'   => max(0, absint($_POST['usp_wcodb_block_duration_hours'] ?? 0)),
+            'usp_wcodb_block_duration_minutes' => max(0, absint($_POST['usp_wcodb_block_duration_minutes'] ?? 60)),
+            'usp_wcodb_combined_block_enabled' => !empty($_POST['usp_wcodb_combined_block_enabled']) ? 'yes' : 'no',
+        );
+
+        foreach ($settings as $key => $value) {
+            update_option($key, $value);
+        }
+
+        wp_send_json_success(__('Blocker settings saved successfully', HKDEV_TEXT_DOMAIN));
     }
 
     // WooCommerce: Validate OTP at checkout
