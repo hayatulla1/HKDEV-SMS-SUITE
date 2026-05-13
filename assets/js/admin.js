@@ -155,12 +155,15 @@ jQuery(document).ready(function ($) {
                         $('#hkdev-fd-product-results').html('<div class="no-results">No products found</div>').show();
                         return;
                     }
-                    var html = '';
+                    var $results = $('#hkdev-fd-product-results').empty();
                     $.each(res.data, function (i, p) {
-                        var escapedName = hkdevEscapeHtml(p.name);
-                        html += '<div class="hkdev-fd-product-result" data-id="' + p.id + '" data-name="' + escapedName + '">' + escapedName + '</div>';
+                        var $item = $('<div class="hkdev-fd-product-result"></div>');
+                        $item.text(p.name);
+                        $item.attr('data-id', p.id);
+                        $item.data('name', p.name);
+                        $results.append($item);
                     });
-                    $('#hkdev-fd-product-results').html(html).show();
+                    $results.show();
                 }
             );
         }, 300);
@@ -194,12 +197,15 @@ jQuery(document).ready(function ($) {
                         $('#hkdev-fd-cat-results').html('<div class="no-results">No categories found</div>').show();
                         return;
                     }
-                    var html = '';
+                    var $results = $('#hkdev-fd-cat-results').empty();
                     $.each(data, function (i, c) {
-                        var escapedName = hkdevEscapeHtml(c.text);
-                        html += '<div class="hkdev-fd-cat-result" data-id="' + c.id + '" data-name="' + escapedName + '">' + escapedName + '</div>';
+                        var $item = $('<div class="hkdev-fd-cat-result"></div>');
+                        $item.text(c.text);
+                        $item.attr('data-id', c.id);
+                        $item.data('name', c.text);
+                        $results.append($item);
                     });
-                    $('#hkdev-fd-cat-results').html(html).show();
+                    $results.show();
                 }
             );
         }, 300);
@@ -233,12 +239,15 @@ jQuery(document).ready(function ($) {
                         $('#hkdev-otp-product-results').html('<div class="no-results">No products found</div>').show();
                         return;
                     }
-                    var html = '';
+                    var $results = $('#hkdev-otp-product-results').empty();
                     $.each(res.data, function (i, p) {
-                        var escapedName = hkdevEscapeHtml(p.name);
-                        html += '<div class="hkdev-otp-product-result" data-id="' + p.id + '" data-name="' + escapedName + '">' + escapedName + '</div>';
+                        var $item = $('<div class="hkdev-otp-product-result"></div>');
+                        $item.text(p.name);
+                        $item.attr('data-id', p.id);
+                        $item.data('name', p.name);
+                        $results.append($item);
                     });
-                    $('#hkdev-otp-product-results').html(html).show();
+                    $results.show();
                 }
             );
         }, 300);
