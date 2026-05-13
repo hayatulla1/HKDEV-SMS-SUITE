@@ -399,9 +399,9 @@ class HKDEV_SMS_Pro {
 
         $settings = array(
             'sib_target_products' => $product_string,
-            'sib_otp_template'    => wp_kses_post($_POST['sib_otp_template'] ?? ''),
-            'sib_order_template'  => wp_kses_post($_POST['sib_order_template'] ?? ''),
-            'sib_status_template' => wp_kses_post($_POST['sib_status_template'] ?? ''),
+            'sib_otp_template'    => sanitize_textarea_field(wp_unslash($_POST['sib_otp_template'] ?? '')),
+            'sib_order_template'  => sanitize_textarea_field(wp_unslash($_POST['sib_order_template'] ?? '')),
+            'sib_status_template' => sanitize_textarea_field(wp_unslash($_POST['sib_status_template'] ?? '')),
         );
 
         foreach ($settings as $key => $value) {

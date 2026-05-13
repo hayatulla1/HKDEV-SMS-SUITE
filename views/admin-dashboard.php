@@ -273,7 +273,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
             <?php foreach ($otp_products as $p): ?>
             <span class="hkdev-tag hkdev-otp-product-tag" data-id="<?php echo esc_attr($p['id']); ?>">
               <?php echo esc_html($p['name']); ?>
-              <button type="button" onclick="jQuery(this).closest('.hkdev-tag').remove()">×</button>
+              <button type="button" class="hkdev-tag-remove">×</button>
             </span>
             <?php endforeach; ?>
           </div>

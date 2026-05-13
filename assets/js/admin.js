@@ -235,7 +235,7 @@ jQuery(document).ready(function ($) {
             $('#hkdev-otp-product-tags').append(
                 '<span class="hkdev-tag hkdev-otp-product-tag" data-id="' + id + '">' +
                 $('<div>').text(name).html() +
-                '<button type="button" onclick="jQuery(this).closest(\'.hkdev-tag\').remove()">×</button></span>'
+                '<button type="button" class="hkdev-tag-remove">×</button></span>'
             );
         }
         $('#hkdev-otp-product-search').val('');
@@ -292,6 +292,11 @@ jQuery(document).ready(function ($) {
         if (template) {
             $('textarea[name="sib_otp_template"]').val(template);
         }
+    });
+
+    // ── Tag Remove ─────────────────────────────────────────────────────────────
+    $(document).on('click', '.hkdev-tag-remove', function () {
+        $(this).closest('.hkdev-tag').remove();
     });
 
     // ── Admin Settings: AJAX Save Helpers ──────────────────────────────────────
@@ -368,7 +373,7 @@ jQuery(document).ready(function ($) {
             sib_order_template: $('textarea[name="sib_order_template"]').val(),
             sib_status_template: $('textarea[name="sib_status_template"]').val()
         };
-        data['products[]'] = products;
+        data.products = products;
 
         hkdevHandleSave($(this), $('#hkdev-save-templates-msg'), data, 'Templates saved successfully.');
     });
