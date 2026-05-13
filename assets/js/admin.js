@@ -33,7 +33,7 @@ jQuery(document).ready(function ($) {
                     var amount = '৳' + res.data.amount;
                     $('#hkdev-balance-display').text(amount);
                     $('#hkdev-balance-value').text(amount);
-                    $('#hkdev-balance-time').text('Just now');
+                    $('#hkdev-balance-time').text(' — checked Just now');
                 } else {
                     alert('Error: ' + res.data);
                 }
@@ -63,6 +63,10 @@ jQuery(document).ready(function ($) {
                 if (res.success) {
                     $('#hkdev-sms-log-table tbody').html('<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:32px">No logs</td></tr>');
                     $('#hkdev-log-count').text('0');
+                    $('#hkdev-sms-log-badge').text('0');
+                    $('#hkdev-sms-log-total').text('0');
+                    $('#hkdev-sms-log-sent').text('0');
+                    $('#hkdev-sms-log-failed').text('0');
                 }
             }
         );
@@ -79,7 +83,13 @@ jQuery(document).ready(function ($) {
                 if (res.success) {
                     $item.fadeOut(300, function () { $(this).remove(); });
                     var c = parseInt($('#hkdev-blocked-count').text(), 10) - 1;
-                    $('#hkdev-blocked-count').text(c < 0 ? 0 : c);
+                    c = c < 0 ? 0 : c;
+                    $('#hkdev-blocked-count').text(c);
+                    $('#hkdev-blocked-total').text(c);
+                    if (c === 0) {
+                        $('#hkdev-blocked-list').html('<div style="text-align:center;padding:48px;color:#94a3b8;background:#fff;border-radius:12px;border:1px dashed #e2e8f0">No users currently blocked</div>');
+                        $('#hkdev-clear-all-blocks').hide();
+                    }
                 } else {
                     alert('Error: ' + res.data);
                 }
@@ -94,6 +104,9 @@ jQuery(document).ready(function ($) {
             function (res) {
                 if (res.success) {
                     $('#hkdev-blocked-list').html('<div style="text-align:center;padding:48px;color:#94a3b8;background:#fff;border-radius:12px;border:1px dashed #e2e8f0">No users currently blocked</div>');
+                    $('#hkdev-blocked-count').text('0');
+                    $('#hkdev-blocked-total').text('0');
+                    $('#hkdev-clear-all-blocks').hide();
                 }
             }
         );
@@ -106,6 +119,10 @@ jQuery(document).ready(function ($) {
             function (res) {
                 if (res.success) {
                     $('#hkdev-block-log-table tbody').html('<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:32px">No activity logs</td></tr>');
+                    $('#hkdev-block-log-badge').text('0');
+                    $('#hkdev-block-log-total').text('0');
+                    $('#hkdev-block-log-blocked').text('0');
+                    $('#hkdev-block-log-unblocked').text('0');
                 }
             }
         );

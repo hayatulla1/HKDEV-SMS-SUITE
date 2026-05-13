@@ -71,7 +71,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
       <div class="hkdev-chip" style="border-color:rgba(99,102,241,.25);background:rgba(99,102,241,.08)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span style="color:#94a3b8">Logs:</span>
-        <span id="hkdev-log-count" style="color:#818cf8;font-weight:600"><?php echo count($logs); ?></span>
+      <span id="hkdev-log-count" style="color:#818cf8;font-weight:600"><?php echo count($logs); ?></span>
       </div>
       <div class="hkdev-nb-divider"></div>
       <div class="hkdev-chip" style="background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.2)">
@@ -96,7 +96,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
       <button class="hkdev-tab-btn active" data-tab="general" onclick="hkSwitchTab('sms','general')">General Settings</button>
       <button class="hkdev-tab-btn" data-tab="api" onclick="hkSwitchTab('sms','api')">API Credentials</button>
       <button class="hkdev-tab-btn" data-tab="templates" onclick="hkSwitchTab('sms','templates')">SMS Templates</button>
-      <button class="hkdev-tab-btn" data-tab="logs" onclick="hkSwitchTab('sms','logs')">SMS Logs <span class="hkdev-tab-badge"><?php echo count($logs); ?></span></button>
+      <button class="hkdev-tab-btn" data-tab="logs" onclick="hkSwitchTab('sms','logs')">SMS Logs <span id="hkdev-sms-log-badge" class="hkdev-tab-badge"><?php echo count($logs); ?></span></button>
     </div>
 
     <!-- General Settings Tab -->
@@ -216,9 +216,9 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
             <div>
               <span class="hkdev-balance-label">Current Balance:</span>
               <span id="hkdev-balance-value" class="hkdev-balance-value"><?php echo esc_html($bal_display); ?></span>
-              <?php if (!empty($balance_cache['checked_at'])): ?>
-              <span class="hkdev-balance-time"> — checked <?php echo esc_html($balance_cache['checked_at']); ?></span>
-              <?php endif; ?>
+              <span id="hkdev-balance-time" class="hkdev-balance-time">
+                <?php echo !empty($balance_cache['checked_at']) ? ' — checked ' . esc_html($balance_cache['checked_at']) : ''; ?>
+              </span>
             </div>
             <button type="button" id="hkdev-check-balance" class="hkdev-btn hkdev-btn--ghost">Check Balance</button>
           </div>
@@ -292,15 +292,15 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
       <div class="hkdev-stats-row">
         <div class="hkdev-stat-card">
           <div class="hkdev-stat-label">Total Logs</div>
-          <div class="hkdev-stat-value"><?php echo count($logs); ?></div>
+          <div id="hkdev-sms-log-total" class="hkdev-stat-value"><?php echo count($logs); ?></div>
         </div>
         <div class="hkdev-stat-card">
           <div class="hkdev-stat-label">Sent Successfully</div>
-          <div class="hkdev-stat-value" style="color:#10b981"><?php echo $total_sent; ?></div>
+          <div id="hkdev-sms-log-sent" class="hkdev-stat-value" style="color:#10b981"><?php echo $total_sent; ?></div>
         </div>
         <div class="hkdev-stat-card">
           <div class="hkdev-stat-label">Failed</div>
-          <div class="hkdev-stat-value" style="color:#ef4444"><?php echo $total_fail; ?></div>
+          <div id="hkdev-sms-log-failed" class="hkdev-stat-value" style="color:#ef4444"><?php echo $total_fail; ?></div>
         </div>
       </div>
       <div class="hkdev-card">
@@ -334,8 +334,8 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
   <div id="hkdev-view-blocker" class="hkdev-view">
     <div class="hkdev-tabs">
       <button class="hkdev-tab-btn active" data-tab="settings" onclick="hkSwitchTab('blocker','settings')">Settings</button>
-      <button class="hkdev-tab-btn" data-tab="blocked" onclick="hkSwitchTab('blocker','blocked')">Blocked Users <span class="hkdev-tab-badge"><?php echo $blocked_total; ?></span></button>
-      <button class="hkdev-tab-btn" data-tab="bloglog" onclick="hkSwitchTab('blocker','bloglog')">Activity Log <span class="hkdev-tab-badge"><?php echo count($block_logs); ?></span></button>
+      <button class="hkdev-tab-btn" data-tab="blocked" onclick="hkSwitchTab('blocker','blocked')">Blocked Users <span id="hkdev-blocked-count" class="hkdev-tab-badge"><?php echo $blocked_total; ?></span></button>
+      <button class="hkdev-tab-btn" data-tab="bloglog" onclick="hkSwitchTab('blocker','bloglog')">Activity Log <span id="hkdev-block-log-badge" class="hkdev-tab-badge"><?php echo count($block_logs); ?></span></button>
     </div>
 
     <!-- Settings Tab -->
@@ -383,7 +383,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <div>
           <h3 style="margin:0;font-size:16px;color:#1e293b">Active Blocks</h3>
-          <p style="margin:4px 0 0;font-size:13px;color:#64748b"><?php echo $blocked_total; ?> user(s) currently blocked</p>
+          <p style="margin:4px 0 0;font-size:13px;color:#64748b"><span id="hkdev-blocked-total"><?php echo $blocked_total; ?></span> user(s) currently blocked</p>
         </div>
         <?php if ($blocked_total > 0): ?>
         <button id="hkdev-clear-all-blocks" class="hkdev-btn hkdev-btn--danger hkdev-btn--sm">Unblock All</button>
@@ -439,15 +439,15 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
       <div class="hkdev-stats-row">
         <div class="hkdev-stat-card">
           <div class="hkdev-stat-label">Total Events</div>
-          <div class="hkdev-stat-value"><?php echo count($block_logs); ?></div>
+          <div id="hkdev-block-log-total" class="hkdev-stat-value"><?php echo count($block_logs); ?></div>
         </div>
         <div class="hkdev-stat-card">
           <div class="hkdev-stat-label">Blocks</div>
-          <div class="hkdev-stat-value" style="color:#ef4444"><?php echo $log_blocked; ?></div>
+          <div id="hkdev-block-log-blocked" class="hkdev-stat-value" style="color:#ef4444"><?php echo $log_blocked; ?></div>
         </div>
         <div class="hkdev-stat-card">
           <div class="hkdev-stat-label">Unblocks</div>
-          <div class="hkdev-stat-value" style="color:#10b981"><?php echo $log_unblocked; ?></div>
+          <div id="hkdev-block-log-unblocked" class="hkdev-stat-value" style="color:#10b981"><?php echo $log_unblocked; ?></div>
         </div>
       </div>
       <div class="hkdev-card">
