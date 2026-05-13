@@ -17,6 +17,19 @@ jQuery(document).ready(function ($) {
         $view.find('#' + viewId + '-tab-' + tabId).addClass('active');
     };
 
+    function hkdevEscapeHtml(value) {
+        var str = String(value);
+        return str.replace(/[&<>"']/g, function (s) {
+            return ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            })[s];
+        });
+    }
+
     // ── Blocked User Expand / Collapse ──────────────────────────────────────────
     $(document).on('click', '.hkdev-blocked-header', function () {
         $(this).closest('.hkdev-blocked-item').toggleClass('open');
@@ -144,7 +157,8 @@ jQuery(document).ready(function ($) {
                     }
                     var html = '';
                     $.each(res.data, function (i, p) {
-                        html += '<div class="hkdev-fd-product-result" data-id="' + p.id + '" data-name="' + $('<div>').text(p.name).html() + '">' + $('<div>').text(p.name).html() + '</div>';
+                        var escapedName = hkdevEscapeHtml(p.name);
+                        html += '<div class="hkdev-fd-product-result" data-id="' + p.id + '" data-name="' + escapedName + '">' + escapedName + '</div>';
                     });
                     $('#hkdev-fd-product-results').html(html).show();
                 }
@@ -158,7 +172,7 @@ jQuery(document).ready(function ($) {
         if (!$('.hkdev-fd-product-tag[data-id="' + id + '"]').length) {
             $('#hkdev-fd-product-tags').append(
                 '<span class="hkdev-tag hkdev-fd-product-tag" data-id="' + id + '">' +
-                $('<div>').text(name).html() +
+                hkdevEscapeHtml(name) +
                 '<button type="button" onclick="jQuery(this).closest(\'.hkdev-tag\').remove()">×</button></span>'
             );
         }
@@ -182,7 +196,8 @@ jQuery(document).ready(function ($) {
                     }
                     var html = '';
                     $.each(data, function (i, c) {
-                        html += '<div class="hkdev-fd-cat-result" data-id="' + c.id + '" data-name="' + $('<div>').text(c.text).html() + '">' + $('<div>').text(c.text).html() + '</div>';
+                        var escapedName = hkdevEscapeHtml(c.text);
+                        html += '<div class="hkdev-fd-cat-result" data-id="' + c.id + '" data-name="' + escapedName + '">' + escapedName + '</div>';
                     });
                     $('#hkdev-fd-cat-results').html(html).show();
                 }
@@ -196,7 +211,7 @@ jQuery(document).ready(function ($) {
         if (!$('.hkdev-fd-cat-tag[data-id="' + id + '"]').length) {
             $('#hkdev-fd-cat-tags').append(
                 '<span class="hkdev-tag hkdev-fd-cat-tag" data-id="' + id + '">' +
-                $('<div>').text(name).html() +
+                hkdevEscapeHtml(name) +
                 '<button type="button" onclick="jQuery(this).closest(\'.hkdev-tag\').remove()">×</button></span>'
             );
         }
@@ -220,7 +235,7 @@ jQuery(document).ready(function ($) {
                     }
                     var html = '';
                     $.each(res.data, function (i, p) {
-                        var escapedName = $('<div>').text(p.name).html();
+                        var escapedName = hkdevEscapeHtml(p.name);
                         html += '<div class="hkdev-otp-product-result" data-id="' + p.id + '" data-name="' + escapedName + '">' + escapedName + '</div>';
                     });
                     $('#hkdev-otp-product-results').html(html).show();
@@ -235,7 +250,7 @@ jQuery(document).ready(function ($) {
         if (!$('.hkdev-otp-product-tag[data-id="' + id + '"]').length) {
             $('#hkdev-otp-product-tags').append(
                 '<span class="hkdev-tag hkdev-otp-product-tag" data-id="' + id + '">' +
-                $('<div>').text(name).html() +
+                hkdevEscapeHtml(name) +
                 '<button type="button" class="hkdev-tag-remove">×</button></span>'
             );
         }
