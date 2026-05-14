@@ -331,7 +331,7 @@ class HKDEV_SMS_Pro {
         $term_is_numeric = is_numeric($term);
         if ($term_is_numeric) {
             $term_id = absint($term);
-            if ($term_id && 'publish' === get_post_status($term_id)) {
+            if ($term_id && 'publish' === get_post_status($term_id) && 'product' === get_post_type($term_id)) {
                 $ids[] = $term_id;
             }
         }
@@ -350,10 +350,11 @@ class HKDEV_SMS_Pro {
         }
 
         if (count($ids) < 20) {
+            $remaining = max(1, 20 - count($ids));
             $sku_query = new WP_Query(array(
                 'post_type'      => 'product',
                 'post_status'    => 'publish',
-                'posts_per_page' => 20,
+                'posts_per_page' => $remaining,
                 'fields'         => 'ids',
                 'meta_query'     => array(
                     array(

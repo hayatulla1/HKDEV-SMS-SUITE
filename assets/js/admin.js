@@ -518,7 +518,7 @@ jQuery(document).ready(function ($) {
     if (Number.isNaN(otpLength) || otpLength <= 0) {
         otpLength = 6;
     }
-    var otpCooldown = parseInt(hkdevAjax && hkdevAjax.otpCooldown ? hkdevAjax.otpCooldown : '', 10);
+    var otpCooldown = parseInt(hkdevAjax && hkdevAjax.otpCooldown ? hkdevAjax.otpCooldown : 60, 10);
     if (Number.isNaN(otpCooldown) || otpCooldown <= 0) {
         otpCooldown = 60;
     }
@@ -630,7 +630,6 @@ jQuery(document).ready(function ($) {
         }
 
         otpVerifyInFlight = true;
-        $('.hkdev-otp-digit').removeClass('hkdev-otp-error');
         var $btn = $('#hkdev-otp-verify-btn');
         var originalText = $btn.text();
         $btn.text('Verifying…').prop('disabled', true);
