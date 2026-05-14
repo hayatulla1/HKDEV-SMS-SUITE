@@ -617,7 +617,11 @@ jQuery(document).ready(function ($) {
     function checkOTPPreview() {
         var code = getOtpCode();
         if (code.length !== otpLength) {
-            $('.hkdev-otp-digit').addClass('hkdev-otp-error');
+            var $digits = $('.hkdev-otp-digit');
+            $digits.removeClass('hkdev-otp-error');
+            $digits.filter(function () {
+                return !jQuery(this).val();
+            }).addClass('hkdev-otp-error');
             alert('Please enter the full OTP code.');
             return;
         }

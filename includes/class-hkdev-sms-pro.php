@@ -350,22 +350,24 @@ class HKDEV_SMS_Pro {
         }
 
         if (count($ids) < 20) {
-            $remaining = max(1, 20 - count($ids));
-            $sku_query = new WP_Query(array(
-                'post_type'      => 'product',
-                'post_status'    => 'publish',
-                'posts_per_page' => $remaining,
-                'fields'         => 'ids',
-                'meta_query'     => array(
-                    array(
-                        'key'     => '_sku',
-                        'value'   => $term,
-                        'compare' => 'LIKE',
+            $remaining = 20 - count($ids);
+            if ($remaining > 0) {
+                $sku_query = new WP_Query(array(
+                    'post_type'      => 'product',
+                    'post_status'    => 'publish',
+                    'posts_per_page' => $remaining,
+                    'fields'         => 'ids',
+                    'meta_query'     => array(
+                        array(
+                            'key'     => '_sku',
+                            'value'   => $term,
+                            'compare' => 'LIKE',
+                        ),
                     ),
-                ),
-            ));
-            if (!empty($sku_query->posts)) {
-                $ids = array_merge($ids, $sku_query->posts);
+                ));
+                if (!empty($sku_query->posts)) {
+                    $ids = array_merge($ids, $sku_query->posts);
+                }
             }
         }
 
