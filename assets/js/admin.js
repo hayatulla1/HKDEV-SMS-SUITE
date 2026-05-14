@@ -280,7 +280,7 @@ jQuery(document).ready(function ($) {
                         var $item = $('<div class="hkdev-otp-product-result"></div>');
                         $item.text(p.name);
                         $item.attr('data-id', p.id);
-                        $item.attr('data-name', p.name);
+                        $item.data('name', p.name);
                         $results.append($item);
                     });
                     $results.show();
@@ -443,7 +443,7 @@ jQuery(document).ready(function ($) {
         var products = [];
         var seen = {};
         $('.hkdev-otp-product-input').each(function () {
-            var id = $(this).val();
+            var id = parseInt($(this).val(), 10);
             if (id && !seen[id]) {
                 seen[id] = true;
                 products.push(id);
