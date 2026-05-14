@@ -1,11 +1,15 @@
 document.addEventListener('DOMContentLoaded', function() {
     const frontendConfig = window.hkdevFrontendAjax || {};
-    const OTP_LENGTH = Number.parseInt(frontendConfig.otpLength, 10) || 6;
-    const COOLDOWN = Number.parseInt(frontendConfig.cooldown, 10) || 60;
+    const otpLengthValue = frontendConfig.otpLength ?? 6;
+    const cooldownValue = frontendConfig.cooldown ?? 60;
+    const parsedOtpLength = Number.parseInt(otpLengthValue, 10);
+    const parsedCooldown = Number.parseInt(cooldownValue, 10);
+    const OTP_LENGTH = Number.isNaN(parsedOtpLength) ? 6 : parsedOtpLength;
+    const COOLDOWN = Number.isNaN(parsedCooldown) ? 60 : parsedCooldown;
 
     const root = document.getElementById('hkdev-otp-react-root');
     if (root && window.wp && wp.element && typeof wp.element.createElement === 'function') {
-        const { createElement, render } = wp.element;
+        const { createElement, createRoot, render } = wp.element;
         const otpInputs = Array.from({ length: OTP_LENGTH }).map((_, index) => (
             createElement('input', {
                 key: index,
@@ -45,7 +49,11 @@ document.addEventListener('DOMContentLoaded', function() {
             )
         );
 
-        render(modal, root);
+        if (typeof createRoot === 'function') {
+            createRoot(root).render(modal);
+        } else if (typeof render === 'function') {
+            render(modal, root);
+        }
     }
 
     const overlay = document.getElementById('hkdev-otp-modal');
@@ -59,8 +67,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorBox = document.getElementById('hkdev-modal-error');
     const phoneInput = document.getElementById('hkdev-phone-input');
     const AUTO_CLOSE_DELAY_MS = 1500;
-    const verifyingText = frontendConfig.verifyingText ? frontendConfig.verifyingText : 'Verifying...';
-    const verifiedText = frontendConfig.verifiedText ? frontendConfig.verifiedText : 'Verified!';
+    const verifyingText = frontendConfig.verifyingText ?? 'Verifying...';
+    const verifiedText = frontendConfig.verifiedText ?? 'Verified!';
     let timerInterval;
     let verifiedPhoneNumber = '';
     let allowNextSubmission = false;
