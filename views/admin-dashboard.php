@@ -276,7 +276,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
             <?php foreach ($otp_products as $p): ?>
             <span class="hkdev-tag hkdev-otp-product-tag" data-id="<?php echo esc_attr($p['id']); ?>">
               <?php echo esc_html($p['name']); ?>
-              <input type="hidden" name="sib_target_products[]" value="<?php echo esc_attr($p['id']); ?>" class="hkdev-otp-product-input">
+              <input type="hidden" name="products[]" value="<?php echo esc_attr($p['id']); ?>" class="hkdev-otp-product-input">
               <button type="button" class="hkdev-tag-remove">×</button>
             </span>
             <?php endforeach; ?>

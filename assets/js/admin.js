@@ -38,6 +38,9 @@ jQuery(document).ready(function ($) {
         var numericId = parseInt(id, 10);
         var safeName = typeof name === 'string' ? name.trim() : String(name || '').trim();
         if (Number.isNaN(numericId) || !safeName) {
+            if (window.console && console.warn) {
+                console.warn('HKDEV SMS Suite: Invalid OTP product data', { id: id, name: name });
+            }
             return;
         }
         var exists = $('#hkdev-otp-product-tags .hkdev-otp-product-tag').filter(function () {
@@ -48,7 +51,7 @@ jQuery(document).ready(function ($) {
         }
         var $tag = $('<span class="hkdev-tag hkdev-otp-product-tag" data-id="' + numericId + '"></span>');
         $tag.append(document.createTextNode(safeName));
-        $tag.append('<input type="hidden" name="sib_target_products[]" value="' + numericId + '" class="hkdev-otp-product-input">');
+        $tag.append('<input type="hidden" name="products[]" value="' + numericId + '" class="hkdev-otp-product-input">');
         $tag.append('<button type="button" class="hkdev-tag-remove">×</button>');
         $('#hkdev-otp-product-tags').append($tag);
     }
@@ -453,6 +456,13 @@ jQuery(document).ready(function ($) {
         var seen = new Set();
         $('.hkdev-otp-product-input').each(function () {
             var id = parseInt($(this).val(), 10);
+            if (!Number.isNaN(id) && !seen.has(id)) {
+                seen.add(id);
+                products.push(id);
+            }
+        });
+        $('.hkdev-otp-product-tag').each(function () {
+            var id = parseInt($(this).data('id'), 10);
             if (!Number.isNaN(id) && !seen.has(id)) {
                 seen.add(id);
                 products.push(id);
