@@ -7,9 +7,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const OTP_LENGTH = Number.isNaN(parsedOtpLength) ? 6 : parsedOtpLength;
     const COOLDOWN = Number.isNaN(parsedCooldown) ? 60 : parsedCooldown;
 
+    let renderedWithReact = false;
     const root = document.getElementById('hkdev-otp-react-root');
     if (root && window.wp && wp.element && typeof wp.element.createElement === 'function') {
-        const { createElement, createRoot, render } = wp.element;
+        const { createElement, createRoot } = wp.element;
+        const legacyRender = wp.element.render;
         const otpInputs = Array.from({ length: OTP_LENGTH }).map((_, index) => (
             createElement('input', {
                 key: index,
@@ -51,8 +53,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (typeof createRoot === 'function') {
             createRoot(root).render(modal);
-        } else if (typeof render === 'function') {
-            render(modal, root);
+            renderedWithReact = true;
+        } else if (typeof legacyRender === 'function') {
+            legacyRender(modal, root);
+            renderedWithReact = true;
         }
     }
 
@@ -85,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Generate OTP input boxes (fallback)
-    if (inputContainer && inputContainer.children.length === 0) {
+    if (!renderedWithReact && inputContainer && inputContainer.children.length === 0) {
         for (let i = 0; i < OTP_LENGTH; i++) {
             const input = document.createElement('input');
             input.type = 'text';
