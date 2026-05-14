@@ -53,16 +53,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (typeof createRoot === 'function') {
             createRoot(root).render(modal);
+            renderedWithReact = true;
         } else if (typeof legacyRender === 'function') {
             legacyRender(modal, root);
+            renderedWithReact = true;
         }
     }
 
     const overlay = document.getElementById('hkdev-otp-modal');
     if (!overlay) return;
-    if (root && root.contains(overlay)) {
-        renderedWithReact = true;
-    }
 
     const form = document.getElementById('hkdev-otp-form');
     const inputContainer = document.getElementById('hkdev-otp-inputs');
