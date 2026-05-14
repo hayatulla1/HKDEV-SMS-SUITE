@@ -514,10 +514,9 @@ jQuery(document).ready(function ($) {
     var otpPhone = '';
     var otpRequestInFlight = false;
     var otpVerifyInFlight = false;
-    var otpLength = parseInt(hkdevAjax && hkdevAjax.otpLength ? hkdevAjax.otpLength : '', 10);
+    var otpLength = parseInt(hkdevAjax && hkdevAjax.otpLength ? hkdevAjax.otpLength : 6, 10);
     if (Number.isNaN(otpLength) || otpLength <= 0) {
-        var digitCount = $('.hkdev-otp-digit').length;
-        otpLength = digitCount > 0 ? digitCount : 6;
+        otpLength = 6;
     }
     var otpCooldown = parseInt(hkdevAjax && hkdevAjax.otpCooldown ? hkdevAjax.otpCooldown : '', 10);
     if (Number.isNaN(otpCooldown) || otpCooldown <= 0) {
@@ -596,7 +595,7 @@ jQuery(document).ready(function ($) {
 
         $digits.off('input keydown').on('input', function () {
             var $t  = $(this);
-            $t.removeClass('hkdev-otp-error');
+            $digits.removeClass('hkdev-otp-error');
             var val = $t.val().replace(/\D/g, '').slice(0, 1);
             $t.val(val);
             if (val) {
@@ -631,6 +630,7 @@ jQuery(document).ready(function ($) {
         }
 
         otpVerifyInFlight = true;
+        $('.hkdev-otp-digit').removeClass('hkdev-otp-error');
         var $btn = $('#hkdev-otp-verify-btn');
         var originalText = $btn.text();
         $btn.text('Verifying…').prop('disabled', true);

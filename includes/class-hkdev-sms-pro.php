@@ -328,21 +328,24 @@ class HKDEV_SMS_Pro {
         }
 
         $ids = array();
-        $query = new WP_Query(array(
-            'post_type'      => 'product',
-            'post_status'    => 'publish',
-            's'              => $term,
-            'posts_per_page' => 20,
-            'fields'         => 'ids',
-        ));
-        if (!empty($query->posts)) {
-            $ids = array_merge($ids, $query->posts);
-        }
-
-        if (is_numeric($term)) {
+        $term_is_numeric = is_numeric($term);
+        if ($term_is_numeric) {
             $term_id = absint($term);
             if ($term_id && 'publish' === get_post_status($term_id)) {
                 $ids[] = $term_id;
+            }
+        }
+
+        if (!$term_is_numeric || empty($ids)) {
+            $query = new WP_Query(array(
+                'post_type'      => 'product',
+                'post_status'    => 'publish',
+                's'              => $term,
+                'posts_per_page' => 20,
+                'fields'         => 'ids',
+            ));
+            if (!empty($query->posts)) {
+                $ids = array_merge($ids, $query->posts);
             }
         }
 
