@@ -516,7 +516,8 @@ jQuery(document).ready(function ($) {
     var otpVerifyInFlight = false;
     var otpLength = parseInt(hkdevAjax && hkdevAjax.otpLength ? hkdevAjax.otpLength : '', 10);
     if (Number.isNaN(otpLength) || otpLength <= 0) {
-        otpLength = $('.hkdev-otp-digit').length || 6;
+        var digitCount = $('.hkdev-otp-digit').length;
+        otpLength = digitCount > 0 ? digitCount : 6;
     }
     var otpCooldown = parseInt(hkdevAjax && hkdevAjax.otpCooldown ? hkdevAjax.otpCooldown : '', 10);
     if (Number.isNaN(otpCooldown) || otpCooldown <= 0) {
@@ -618,6 +619,7 @@ jQuery(document).ready(function ($) {
         var code = getOtpCode();
         if (code.length !== otpLength) {
             $('.hkdev-otp-digit').addClass('hkdev-otp-error');
+            alert('Please enter the full OTP code.');
             return;
         }
         verifyOtp(code);
