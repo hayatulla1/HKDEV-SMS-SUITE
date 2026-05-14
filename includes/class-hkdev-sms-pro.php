@@ -122,7 +122,7 @@ class HKDEV_SMS_Pro {
         }
 
         wp_enqueue_style('hkdev-frontend-css', HKDEV_PLUGIN_URL . 'assets/css/frontend.css', array(), HKDEV_PLUGIN_VERSION);
-        wp_enqueue_script('hkdev-frontend-js', HKDEV_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), HKDEV_PLUGIN_VERSION, true);
+        wp_enqueue_script('hkdev-frontend-js', HKDEV_PLUGIN_URL . 'assets/js/frontend.js', array('jquery', 'wp-element'), HKDEV_PLUGIN_VERSION, true);
 
         wp_localize_script('hkdev-frontend-js', 'hkdevFrontendAjax', array(
             'ajaxUrl'       => admin_url('admin-ajax.php'),
@@ -131,6 +131,12 @@ class HKDEV_SMS_Pro {
             'cooldown'      => get_option('hkdev_otp_cooldown_seconds', 60),
             'verifyingText' => __('Verifying...', HKDEV_TEXT_DOMAIN),
             'verifiedText'  => __('Verified!', HKDEV_TEXT_DOMAIN),
+            'modalTitle'        => __('Phone Verification Required', HKDEV_TEXT_DOMAIN),
+            'modalDescription'  => __('Verify your phone to complete your order', HKDEV_TEXT_DOMAIN),
+            'verifyButtonText'  => __('Verify & Continue Order', HKDEV_TEXT_DOMAIN),
+            'resendPrefix'      => __('Resend code in', HKDEV_TEXT_DOMAIN),
+            'resendButtonText'  => __('Resend OTP', HKDEV_TEXT_DOMAIN),
+            'closeLabel'        => __('Close', HKDEV_TEXT_DOMAIN),
         ));
     }
 

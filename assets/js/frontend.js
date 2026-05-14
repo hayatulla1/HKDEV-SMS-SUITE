@@ -1,4 +1,62 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const frontendConfig = window.hkdevFrontendAjax || {};
+    const otpLengthValue = frontendConfig.otpLength ?? 6;
+    const cooldownValue = frontendConfig.cooldown ?? 60;
+    const parsedOtpLength = Number.parseInt(otpLengthValue, 10);
+    const parsedCooldown = Number.parseInt(cooldownValue, 10);
+    const OTP_LENGTH = Number.isNaN(parsedOtpLength) ? 6 : parsedOtpLength;
+    const COOLDOWN = Number.isNaN(parsedCooldown) ? 60 : parsedCooldown;
+
+    const root = document.getElementById('hkdev-otp-react-root');
+    if (root && window.wp && wp.element && typeof wp.element.createElement === 'function') {
+        const { createElement, createRoot } = wp.element;
+        const legacyRender = wp.element.render;
+        const otpInputs = Array.from({ length: OTP_LENGTH }).map((_, index) => (
+            createElement('input', {
+                key: index,
+                type: 'text',
+                inputMode: 'numeric',
+                maxLength: 1,
+                className: 'otp-input-box',
+                required: true,
+                'data-index': index
+            })
+        ));
+
+        const modal = createElement('div', { className: 'hkdev-modal-overlay', id: 'hkdev-otp-modal' },
+            createElement('div', { className: 'otp-modal' },
+                createElement('button', { className: 'modal-close', id: 'hkdev-close-modal', type: 'button', 'aria-label': frontendConfig.closeLabel || 'Close' },
+                    createElement('i', { className: 'ph ph-x' })
+                ),
+                createElement('div', { className: 'modal-icon-top' },
+                    createElement('i', { className: 'ph-fill ph-device-mobile' })
+                ),
+                createElement('h3', { className: 'modal-title' }, frontendConfig.modalTitle || 'Phone Verification Required'),
+                createElement('p', { className: 'modal-desc' }, frontendConfig.modalDescription || 'Verify your phone to complete your order'),
+                createElement('div', { className: 'modal-error-alert', id: 'hkdev-modal-error' }),
+                createElement('form', { id: 'hkdev-otp-form' },
+                    createElement('input', { type: 'hidden', name: 'phone', id: 'hkdev-phone-input' }),
+                    createElement('div', { className: 'otp-input-group', id: 'hkdev-otp-inputs' }, otpInputs),
+                    createElement('button', { type: 'submit', className: 'btn-verify-full', id: 'hkdev-btn-verify', disabled: true },
+                        createElement('i', { className: 'ph-bold ph-shield-check' }),
+                        createElement('span', { id: 'hkdev-btn-verify-text' }, frontendConfig.verifyButtonText || 'Verify & Continue Order')
+                    )
+                ),
+                createElement('div', { className: 'resend-text', id: 'hkdev-timer-wrapper', style: { display: 'none' } },
+                    frontendConfig.resendPrefix || 'Resend code in',
+                    createElement('span', { className: 'resend-timer', id: 'hkdev-countdown' })
+                ),
+                createElement('button', { className: 'resend-link', id: 'hkdev-btn-resend', type: 'button' }, frontendConfig.resendButtonText || 'Resend OTP')
+            )
+        );
+
+        if (typeof createRoot === 'function') {
+            createRoot(root).render(modal);
+        } else if (typeof legacyRender === 'function') {
+            legacyRender(modal, root);
+        }
+    }
+
     const overlay = document.getElementById('hkdev-otp-modal');
     if (!overlay) return;
 
@@ -10,12 +68,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorBox = document.getElementById('hkdev-modal-error');
     const phoneInput = document.getElementById('hkdev-phone-input');
     const AUTO_CLOSE_DELAY_MS = 1500;
-    const verifyingText = window.hkdevFrontendAjax && hkdevFrontendAjax.verifyingText ? hkdevFrontendAjax.verifyingText : 'Verifying...';
-    const verifiedText = window.hkdevFrontendAjax && hkdevFrontendAjax.verifiedText ? hkdevFrontendAjax.verifiedText : 'Verified!';
-
-    // Config from wp_localize_script
-    const OTP_LENGTH = window.hkdevFrontendAjax ? parseInt(hkdevFrontendAjax.otpLength) : 6;
-    const COOLDOWN = window.hkdevFrontendAjax ? parseInt(hkdevFrontendAjax.cooldown) : 60;
+    const verifyingText = frontendConfig.verifyingText ?? 'Verifying...';
+    const verifiedText = frontendConfig.verifiedText ?? 'Verified!';
     let timerInterval;
     let verifiedPhoneNumber = '';
     let allowNextSubmission = false;
@@ -29,18 +83,6 @@ document.addEventListener('DOMContentLoaded', function() {
         pendingCheckoutForm = null;
         btnVerify.classList.remove('success');
         btnText.textContent = defaultVerifyText;
-    }
-
-    // Generate OTP input boxes
-    for (let i = 0; i < OTP_LENGTH; i++) {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.inputMode = 'numeric';
-        input.maxLength = 1;
-        input.className = 'otp-input-box';
-        input.required = true;
-        input.dataset.index = i;
-        inputContainer.appendChild(input);
     }
 
     const inputs = document.querySelectorAll('.otp-input-box');
