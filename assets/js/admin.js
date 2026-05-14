@@ -36,7 +36,7 @@ jQuery(document).ready(function ($) {
 
     function hkdevAddOtpProductTag(id, name) {
         var numericId = parseInt(id, 10);
-        if (!numericId || !name) {
+        if (Number.isNaN(numericId) || !name) {
             return;
         }
         if ($('#hkdev-otp-product-tags .hkdev-otp-product-tag[data-id="' + numericId + '"]').length) {
@@ -449,7 +449,7 @@ jQuery(document).ready(function ($) {
         var seen = {};
         $('.hkdev-otp-product-input').each(function () {
             var id = parseInt($(this).val(), 10);
-            if (id && !seen[id]) {
+            if (!Number.isNaN(id) && !seen[id]) {
                 seen[id] = true;
                 products.push(id);
             }
