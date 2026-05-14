@@ -30,16 +30,21 @@ jQuery(document).ready(function ($) {
         });
     }
 
+    function hkdevResolveMessage(payload) {
+        return payload && payload.message ? payload.message : payload;
+    }
+
     function hkdevAddOtpProductTag(id, name) {
-        if (!id || !name) {
+        var numericId = parseInt(id, 10);
+        if (!numericId || !name) {
             return;
         }
-        if ($('#hkdev-otp-product-tags .hkdev-otp-product-tag[data-id="' + id + '"]').length) {
+        if ($('#hkdev-otp-product-tags .hkdev-otp-product-tag[data-id="' + numericId + '"]').length) {
             return;
         }
-        var $tag = $('<span class="hkdev-tag hkdev-otp-product-tag" data-id="' + id + '"></span>');
+        var $tag = $('<span class="hkdev-tag hkdev-otp-product-tag" data-id="' + numericId + '"></span>');
         $tag.append(document.createTextNode(name));
-        $tag.append('<input type="hidden" name="sib_target_products[]" value="' + id + '" class="hkdev-otp-product-input">');
+        $tag.append('<input type="hidden" name="sib_target_products[]" value="' + numericId + '" class="hkdev-otp-product-input">');
         $tag.append('<button type="button" class="hkdev-tag-remove">×</button>');
         $('#hkdev-otp-product-tags').append($tag);
     }
@@ -348,7 +353,7 @@ jQuery(document).ready(function ($) {
                     $msg.fadeOut();
                 }, 2500);
             } else {
-                var errorText = res.data && res.data.message ? res.data.message : res.data;
+                var errorText = hkdevResolveMessage(res.data);
                 $msg.addClass('hkdev-save-msg--error').text(errorText ? ('Error: ' + errorText) : 'Save failed').show();
                 $btn.text('Save Free Delivery Settings').prop('disabled', false);
             }
@@ -382,14 +387,14 @@ jQuery(document).ready(function ($) {
             }
             if (res.success) {
                 $btn.text('✓ Saved!');
-                var successMessage = res.data && res.data.message ? res.data.message : res.data;
+                var successMessage = hkdevResolveMessage(res.data);
                 $msg.removeClass('hkdev-save-msg--error').text(successMessage || successFallback || 'Saved successfully.').show();
                 setTimeout(function () {
                     $btn.text(original).prop('disabled', false);
                     $msg.fadeOut();
                 }, 2500);
             } else {
-                var errorMessage = res.data && res.data.message ? res.data.message : res.data;
+                var errorMessage = hkdevResolveMessage(res.data);
                 $msg.addClass('hkdev-save-msg--error').text(errorMessage || 'Save failed').show();
                 $btn.text(original).prop('disabled', false);
             }
