@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const OTP_LENGTH = Number.isNaN(parsedOtpLength) ? 6 : parsedOtpLength;
     const COOLDOWN = Number.isNaN(parsedCooldown) ? 60 : parsedCooldown;
 
-    let renderedWithReact = false;
     const root = document.getElementById('hkdev-otp-react-root');
     if (root && window.wp && wp.element && typeof wp.element.createElement === 'function') {
         const { createElement, createRoot } = wp.element;
@@ -53,10 +52,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (typeof createRoot === 'function') {
             createRoot(root).render(modal);
-            renderedWithReact = true;
         } else if (typeof legacyRender === 'function') {
             legacyRender(modal, root);
-            renderedWithReact = true;
         }
     }
 
@@ -86,20 +83,6 @@ document.addEventListener('DOMContentLoaded', function() {
         pendingCheckoutForm = null;
         btnVerify.classList.remove('success');
         btnText.textContent = defaultVerifyText;
-    }
-
-    // Generate OTP input boxes (fallback)
-    if (!renderedWithReact && inputContainer && inputContainer.children.length === 0) {
-        for (let i = 0; i < OTP_LENGTH; i++) {
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.inputMode = 'numeric';
-            input.maxLength = 1;
-            input.className = 'otp-input-box';
-            input.required = true;
-            input.dataset.index = i;
-            inputContainer.appendChild(input);
-        }
     }
 
     const inputs = document.querySelectorAll('.otp-input-box');
