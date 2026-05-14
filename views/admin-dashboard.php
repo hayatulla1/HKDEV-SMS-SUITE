@@ -12,6 +12,8 @@ $otp_preset_template = apply_filters(
     'hkdev_prebuilt_otp_template',
     __('আপনার OTP হলো {OTP}. OTP ভেরিফাই করলে অর্ডার প্লেস হবে এবং থ্যাংক ইউ পেজে যাবে।', HKDEV_TEXT_DOMAIN)
 );
+$otp_length = absint(get_option('hkdev_otp_length', 6));
+$otp_length = max(4, min(8, $otp_length));
 $bal_amount  = $balance_cache['amount'] ?? 'N/A';
 $bal_display = is_numeric($bal_amount) ? '৳' . $bal_amount : $bal_amount;
 
@@ -664,12 +666,9 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
       <h2 style="margin:0 0 6px;font-size:20px;color:#1e293b">Enter OTP Code</h2>
       <p style="margin:0 0 4px;color:#64748b;font-size:13px">Code sent to <strong id="hkdev-otp-phone-display"></strong></p>
       <div class="hkdev-otp-inputs">
-        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
-        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
-        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
-        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
-        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
-        <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
+        <?php for ($i = 0; $i < $otp_length; $i++): ?>
+          <input type="text" class="hkdev-otp-digit" maxlength="1" inputmode="numeric">
+        <?php endfor; ?>
       </div>
       <p id="hkdev-otp-countdown" class="hkdev-countdown">Expires in 1:00</p>
       <button id="hkdev-otp-verify-btn" class="hkdev-btn hkdev-btn--primary" style="width:100%;padding:12px;margin-top:8px">Verify OTP</button>

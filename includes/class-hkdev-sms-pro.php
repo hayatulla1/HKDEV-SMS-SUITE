@@ -110,6 +110,8 @@ class HKDEV_SMS_Pro {
             'nonce'       => wp_create_nonce('hkdev_admin_nonce'),
             'otpNonce'    => wp_create_nonce('hkdev_otp_nonce'),
             'searchNonce' => wp_create_nonce('wc_product_search'),
+            'otpLength'   => get_option('hkdev_otp_length', 6),
+            'otpCooldown' => get_option('hkdev_otp_cooldown_seconds', 60),
         ));
     }
 
@@ -306,9 +308,18 @@ class HKDEV_SMS_Pro {
 
     // AJAX: Search Products (for Free Delivery settings)
     public function ajax_search_products() {
-        check_ajax_referer('hkdev_admin_nonce', 'nonce');
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+        if (!$nonce && isset($_POST['security'])) {
+            $nonce = sanitize_text_field(wp_unslash($_POST['security']));
+        }
+        if (
+            !$nonce ||
+            (!wp_verify_nonce($nonce, 'hkdev_admin_nonce') && !wp_verify_nonce($nonce, 'wc_product_search'))
+        ) {
+            wp_send_json_error(__('Unauthorized', HKDEV_TEXT_DOMAIN));
+        }
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', HKDEV_TEXT_DOMAIN));
         }
 
         $term = isset($_POST['term']) ? sanitize_text_field($_POST['term']) : '';
@@ -316,6 +327,7 @@ class HKDEV_SMS_Pro {
             wp_send_json_success(array());
         }
 
+        $ids = array();
         $query = new WP_Query(array(
             'post_type'      => 'product',
             'post_status'    => 'publish',
@@ -323,9 +335,35 @@ class HKDEV_SMS_Pro {
             'posts_per_page' => 20,
             'fields'         => 'ids',
         ));
+        if (!empty($query->posts)) {
+            $ids = array_merge($ids, $query->posts);
+        }
+
+        if (is_numeric($term)) {
+            $ids[] = absint($term);
+        }
+
+        $sku_query = new WP_Query(array(
+            'post_type'      => 'product',
+            'post_status'    => 'publish',
+            'posts_per_page' => 20,
+            'fields'         => 'ids',
+            'meta_query'     => array(
+                array(
+                    'key'     => '_sku',
+                    'value'   => $term,
+                    'compare' => 'LIKE',
+                ),
+            ),
+        ));
+        if (!empty($sku_query->posts)) {
+            $ids = array_merge($ids, $sku_query->posts);
+        }
+
+        $ids = array_values(array_unique(array_filter($ids)));
 
         $results = array();
-        foreach ($query->posts as $id) {
+        foreach (array_slice($ids, 0, 20) as $id) {
             $product = wc_get_product($id);
             if ($product) {
                 $results[] = array('id' => $id, 'name' => $product->get_name());

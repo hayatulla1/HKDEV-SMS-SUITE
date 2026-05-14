@@ -34,6 +34,17 @@ jQuery(document).ready(function ($) {
         return payload && payload.message ? payload.message : payload;
     }
 
+    function hkdevNormalizeAjaxResponse(response) {
+        if (typeof response === 'string') {
+            try {
+                return JSON.parse(response);
+            } catch (err) {
+                return null;
+            }
+        }
+        return response;
+    }
+
     function hkdevAddOtpProductTag(id, name) {
         var numericId = parseInt(id, 10);
         var safeName = typeof name === 'string' ? name.trim() : String(name || '').trim();
@@ -281,9 +292,10 @@ jQuery(document).ready(function ($) {
         if (term.length < 2) { $('#hkdev-otp-product-results').hide(); return; }
 
         otpProductTimer = setTimeout(function () {
-            $.post(hkdevAjax.ajaxUrl, { action: 'hkdev_search_products', nonce: hkdevAjax.nonce, term: term },
-                function (res) {
-                    if (!res.success || !res.data.length) {
+            $.post(hkdevAjax.ajaxUrl, { action: 'hkdev_search_products', nonce: hkdevAjax.nonce, term: term })
+                .done(function (res) {
+                    res = hkdevNormalizeAjaxResponse(res);
+                    if (!res || !res.success || !Array.isArray(res.data) || !res.data.length) {
                         $('#hkdev-otp-product-results').html('<div class="no-results">No products found</div>').show();
                         return;
                     }
@@ -296,8 +308,10 @@ jQuery(document).ready(function ($) {
                         $results.append($item);
                     });
                     $results.show();
-                }
-            );
+                })
+                .fail(function () {
+                    $('#hkdev-otp-product-results').html('<div class="no-results">Search failed. Please refresh.</div>').show();
+                });
         }, 300);
     });
 
@@ -498,6 +512,16 @@ jQuery(document).ready(function ($) {
     // ── OTP Preview Modal ───────────────────────────────────────────────────────
     var otpTimer = null;
     var otpPhone = '';
+    var otpRequestInFlight = false;
+    var otpVerifyInFlight = false;
+    var otpLength = parseInt(hkdevAjax && hkdevAjax.otpLength ? hkdevAjax.otpLength : '', 10);
+    if (Number.isNaN(otpLength) || otpLength <= 0) {
+        otpLength = $('.hkdev-otp-digit').length || 6;
+    }
+    var otpCooldown = parseInt(hkdevAjax && hkdevAjax.otpCooldown ? hkdevAjax.otpCooldown : '', 10);
+    if (Number.isNaN(otpCooldown) || otpCooldown <= 0) {
+        otpCooldown = 60;
+    }
 
     function showOTPStep(step) {
         $('.hkdev-modal-step').removeClass('active');
@@ -507,6 +531,7 @@ jQuery(document).ready(function ($) {
     $(document).on('click', '#hkdev-preview-otp', function () {
         showOTPStep(1);
         $('#hkdev-otp-phone-input').val('');
+        otpPhone = '';
         $('#hkdev-otp-modal').fadeIn(200);
     });
 
@@ -522,22 +547,46 @@ jQuery(document).ready(function ($) {
         }
     });
 
-    // Step 1: Send OTP (preview — simulated)
+    function sendOtpRequest(phone, $button) {
+        if (!phone || otpRequestInFlight) {
+            return;
+        }
+
+        otpRequestInFlight = true;
+        var $btn = $button && $button.length ? $button : $('#hkdev-otp-send-btn');
+        var originalText = $btn.text();
+        $btn.text('Sending…').prop('disabled', true);
+
+        $.post(hkdevAjax.ajaxUrl, {
+            action: 'hkdev_send_otp',
+            nonce: hkdevAjax.otpNonce,
+            phone: phone
+        }).done(function (res) {
+            res = hkdevNormalizeAjaxResponse(res);
+            if (!res || !res.success) {
+                var errorMessage = hkdevResolveMessage(res ? res.data : null) || 'Failed to send OTP';
+                alert(errorMessage);
+                return;
+            }
+            otpPhone = phone;
+            $('#hkdev-otp-phone-display').text(otpPhone);
+            showOTPStep(2);
+            initOTPInputs();
+            startCountdown(otpCooldown);
+        }).fail(function () {
+            alert('Failed to send OTP');
+        }).always(function () {
+            otpRequestInFlight = false;
+            $btn.text(originalText).prop('disabled', false);
+        });
+    }
+
+    // Step 1: Send OTP
     $(document).on('click', '#hkdev-otp-send-btn', function () {
         otpPhone = $('#hkdev-otp-phone-input').val().trim();
         if (!otpPhone) { $('#hkdev-otp-phone-input').focus(); return; }
 
-        var $btn = $(this);
-        $btn.text('Sending…').prop('disabled', true);
-
-        // Simulate delay then show step 2
-        setTimeout(function () {
-            $btn.text('Send OTP').prop('disabled', false);
-            $('#hkdev-otp-phone-display').text(otpPhone);
-            showOTPStep(2);
-            initOTPInputs();
-            startCountdown(60);
-        }, 800);
+        sendOtpRequest(otpPhone, $(this));
     });
 
     function initOTPInputs() {
@@ -546,6 +595,7 @@ jQuery(document).ready(function ($) {
 
         $digits.off('input keydown').on('input', function () {
             var $t  = $(this);
+            $t.removeClass('hkdev-otp-error');
             var val = $t.val().replace(/\D/g, '').slice(0, 1);
             $t.val(val);
             if (val) {
@@ -560,12 +610,51 @@ jQuery(document).ready(function ($) {
         });
     }
 
+    function getOtpCode() {
+        return $('.hkdev-otp-digit').map(function () { return $(this).val(); }).get().join('');
+    }
+
     function checkOTPPreview() {
-        var code = $('.hkdev-otp-digit').map(function () { return $(this).val(); }).get().join('');
-        if (code.length !== 6) return;
-        // Preview mode — any 6 digits = success
-        clearInterval(otpTimer);
-        setTimeout(function () { showOTPStep(3); }, 300);
+        var code = getOtpCode();
+        if (code.length !== otpLength) {
+            $('.hkdev-otp-digit').addClass('hkdev-otp-error');
+            return;
+        }
+        verifyOtp(code);
+    }
+
+    function verifyOtp(code) {
+        if (!otpPhone || otpVerifyInFlight) {
+            return;
+        }
+
+        otpVerifyInFlight = true;
+        var $btn = $('#hkdev-otp-verify-btn');
+        var originalText = $btn.text();
+        $btn.text('Verifying…').prop('disabled', true);
+
+        $.post(hkdevAjax.ajaxUrl, {
+            action: 'hkdev_verify_otp',
+            nonce: hkdevAjax.otpNonce,
+            phone: otpPhone,
+            otp: code
+        }).done(function (res) {
+            res = hkdevNormalizeAjaxResponse(res);
+            if (res && res.success) {
+                clearInterval(otpTimer);
+                showOTPStep(3);
+                return;
+            }
+            var errorMessage = hkdevResolveMessage(res ? res.data : null) || 'Invalid OTP. Please try again.';
+            $('.hkdev-otp-digit').addClass('hkdev-otp-error');
+            alert(errorMessage);
+        }).fail(function () {
+            $('.hkdev-otp-digit').addClass('hkdev-otp-error');
+            alert('Failed to verify OTP');
+        }).always(function () {
+            otpVerifyInFlight = false;
+            $btn.text(originalText).prop('disabled', false);
+        });
     }
 
     // Step 2: Verify button (for users who don't auto-advance)
@@ -601,7 +690,7 @@ jQuery(document).ready(function ($) {
     $(document).on('click', '#hkdev-resend-btn', function () {
         if ($(this).prop('disabled')) return;
         initOTPInputs();
-        startCountdown(60);
+        sendOtpRequest(otpPhone, $(this));
     });
 
 });
