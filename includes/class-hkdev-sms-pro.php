@@ -397,6 +397,8 @@ class HKDEV_SMS_Pro {
         $products = array();
         if (isset($_POST['products'])) {
             $products = array_filter(array_map('absint', (array) $_POST['products']));
+        } elseif (isset($_POST['sib_target_products'])) {
+            $products = array_filter(array_map('absint', (array) $_POST['sib_target_products']));
         }
         $product_string = implode(',', $products);
 
