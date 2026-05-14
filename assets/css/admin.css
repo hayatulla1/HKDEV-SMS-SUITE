@@ -93,6 +93,8 @@
 .hkdev-btn--ghost:hover { background: #f8fafc; }
 .hkdev-btn--sm { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
 .submit-btn-row { margin-top: 20px; padding-top: 18px; border-top: 1px solid #f1f5f9; }
+.hkdev-save-msg { display: none; font-size: 13px; color: #10b981; background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.2); padding: 6px 10px; border-radius: 8px; }
+.hkdev-save-msg.hkdev-save-msg--error { color: #ef4444; background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.2); }
 
 .hkdev-balance-check-row { display: flex; align-items: center; justify-content: space-between; padding: 14px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 4px; }
 .hkdev-balance-label { font-size: 13px; color: #64748b; }

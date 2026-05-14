@@ -165,7 +165,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
         </div>
         <div class="submit-btn-row" style="display:flex;gap:12px;align-items:center">
           <button type="button" id="hkdev-save-general" class="hkdev-btn hkdev-btn--primary">Save Settings</button>
-          <span id="hkdev-save-general-msg" style="font-size:13px;color:#10b981;display:none"></span>
+          <span id="hkdev-save-general-msg" class="hkdev-save-msg"></span>
         </div>
       </form>
     </div>
@@ -253,7 +253,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
         </div>
         <div class="submit-btn-row" style="display:flex;gap:12px;align-items:center">
           <button type="button" id="hkdev-save-api" class="hkdev-btn hkdev-btn--primary">Save Settings</button>
-          <span id="hkdev-save-api-msg" style="font-size:13px;color:#10b981;display:none"></span>
+          <span id="hkdev-save-api-msg" class="hkdev-save-msg"></span>
         </div>
       </form>
     </div>
@@ -308,7 +308,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
         </div>
         <div class="submit-btn-row" style="display:flex;gap:12px;align-items:center">
           <button type="button" id="hkdev-save-templates" class="hkdev-btn hkdev-btn--primary">Save Templates</button>
-          <span id="hkdev-save-templates-msg" style="font-size:13px;color:#10b981;display:none"></span>
+          <span id="hkdev-save-templates-msg" class="hkdev-save-msg"></span>
         </div>
       </form>
     </div>
@@ -404,7 +404,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
         </div>
         <div class="submit-btn-row" style="display:flex;gap:12px;align-items:center">
           <button type="button" id="hkdev-save-blocker" class="hkdev-btn hkdev-btn--primary">Save Settings</button>
-          <span id="hkdev-save-blocker-msg" style="font-size:13px;color:#10b981;display:none"></span>
+          <span id="hkdev-save-blocker-msg" class="hkdev-save-msg"></span>
         </div>
       </form>
     </div>
@@ -608,7 +608,7 @@ $log_unblocked = count(array_filter($block_logs, fn($l) => ($l['event'] ?? '') =
 
       <div class="submit-btn-row" style="display:flex;gap:12px;align-items:center">
         <button type="button" id="hkdev-fd-save-btn" class="hkdev-btn hkdev-btn--emerald">Save Free Delivery Settings</button>
-        <span id="hkdev-fd-save-msg" style="font-size:13px;color:#10b981;display:none"></span>
+        <span id="hkdev-fd-save-msg" class="hkdev-save-msg"></span>
       </div>
     </div>
 

@@ -318,7 +318,9 @@ jQuery(document).ready(function ($) {
     // ── Free Delivery: Save Settings (AJAX) ────────────────────────────────────
     $(document).on('click', '#hkdev-fd-save-btn', function () {
         var $btn = $(this);
+        var $msg = $('#hkdev-fd-save-msg');
         $btn.text('Saving…').prop('disabled', true);
+        $msg.removeClass('hkdev-save-msg--error').hide();
 
         var products = [], categories = [];
         $('.hkdev-fd-product-tag').each(function () { products.push($(this).data('id')); });
@@ -340,13 +342,14 @@ jQuery(document).ready(function ($) {
         $.post(hkdevAjax.ajaxUrl, data, function (res) {
             if (res.success) {
                 $btn.text('✓ Saved!');
-                $('#hkdev-fd-save-msg').text('Settings saved successfully.').show();
+                $msg.removeClass('hkdev-save-msg--error').text('Settings saved successfully.').show();
                 setTimeout(function () {
                     $btn.text('Save Free Delivery Settings').prop('disabled', false);
-                    $('#hkdev-fd-save-msg').fadeOut();
+                    $msg.fadeOut();
                 }, 2500);
             } else {
-                alert('Error: ' + res.data);
+                var errorText = res.data && res.data.message ? res.data.message : res.data;
+                $msg.addClass('hkdev-save-msg--error').text(errorText ? ('Error: ' + errorText) : 'Save failed').show();
                 $btn.text('Save Free Delivery Settings').prop('disabled', false);
             }
         });
@@ -369,28 +372,29 @@ jQuery(document).ready(function ($) {
     function hkdevHandleSave($btn, $msg, data, successFallback) {
         var original = $btn.text();
         $btn.text('Saving…').prop('disabled', true);
+        $msg.removeClass('hkdev-save-msg--error').hide();
 
         $.post(hkdevAjax.ajaxUrl, data, function (res) {
             if (!res || typeof res.success === 'undefined') {
-                $msg.text('Unexpected server response').css('color', '#ef4444').show();
+                $msg.addClass('hkdev-save-msg--error').text('Unexpected server response').show();
                 $btn.text(original).prop('disabled', false);
                 return;
             }
             if (res.success) {
                 $btn.text('✓ Saved!');
                 var successMessage = res.data && res.data.message ? res.data.message : res.data;
-                $msg.text(successMessage || successFallback || 'Saved successfully.').css('color', '#10b981').show();
+                $msg.removeClass('hkdev-save-msg--error').text(successMessage || successFallback || 'Saved successfully.').show();
                 setTimeout(function () {
                     $btn.text(original).prop('disabled', false);
                     $msg.fadeOut();
                 }, 2500);
             } else {
                 var errorMessage = res.data && res.data.message ? res.data.message : res.data;
-                $msg.text(errorMessage || 'Save failed').css('color', '#ef4444').show();
+                $msg.addClass('hkdev-save-msg--error').text(errorMessage || 'Save failed').show();
                 $btn.text(original).prop('disabled', false);
             }
         }).fail(function () {
-            $msg.text('Save failed').css('color', '#ef4444').show();
+            $msg.addClass('hkdev-save-msg--error').text('Save failed').show();
             $btn.text(original).prop('disabled', false);
         });
     }
