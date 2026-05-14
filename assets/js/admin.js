@@ -36,14 +36,18 @@ jQuery(document).ready(function ($) {
 
     function hkdevAddOtpProductTag(id, name) {
         var numericId = parseInt(id, 10);
-        if (Number.isNaN(numericId) || !name) {
+        var safeName = typeof name === 'string' ? name.trim() : String(name || '').trim();
+        if (Number.isNaN(numericId) || !safeName) {
             return;
         }
-        if ($('#hkdev-otp-product-tags .hkdev-otp-product-tag[data-id="' + numericId + '"]').length) {
+        var exists = $('#hkdev-otp-product-tags .hkdev-otp-product-tag').filter(function () {
+            return parseInt($(this).data('id'), 10) === numericId;
+        }).length;
+        if (exists) {
             return;
         }
         var $tag = $('<span class="hkdev-tag hkdev-otp-product-tag" data-id="' + numericId + '"></span>');
-        $tag.append(document.createTextNode(name));
+        $tag.append(document.createTextNode(safeName));
         $tag.append('<input type="hidden" name="sib_target_products[]" value="' + numericId + '" class="hkdev-otp-product-input">');
         $tag.append('<button type="button" class="hkdev-tag-remove">×</button>');
         $('#hkdev-otp-product-tags').append($tag);
@@ -446,11 +450,11 @@ jQuery(document).ready(function ($) {
     // ── Templates Save ─────────────────────────────────────────────────────────
     $(document).on('click', '#hkdev-save-templates', function () {
         var products = [];
-        var seen = {};
+        var seen = new Set();
         $('.hkdev-otp-product-input').each(function () {
             var id = parseInt($(this).val(), 10);
-            if (!Number.isNaN(id) && !seen[id]) {
-                seen[id] = true;
+            if (!Number.isNaN(id) && !seen.has(id)) {
+                seen.add(id);
                 products.push(id);
             }
         });
